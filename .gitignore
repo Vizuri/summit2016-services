@@ -1,0 +1,14 @@
+.DS_Store
+.project
+.classpath
+.metadata
+target
+.settings
+/bin
+/target
+dist
+*.iml
+*.idea
+*.camel
+*.log
+*.sql

@@ -1,0 +1,56 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<!-- 
+	<parent>
+		<groupId>org.jbpm</groupId>
+		<artifactId>jbpm</artifactId>
+		<version>6.4.0.Final-redhat-3</version>
+	</parent> -->
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.redhat.vizuri</groupId>
+	<artifactId>vizuri_summit_execution</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>pom</packaging>
+	<modules>
+		<module>process-domain</module>
+		<module>summit-services</module>
+	</modules>
+
+	<properties>
+
+		<mobile.claims.kjar.version>1.0-SNAPSHOT</mobile.claims.kjar.version>
+		<version.jboss.maven.plugin>7.4.Final</version.jboss.maven.plugin>
+	</properties>
+	<repositories>
+		<!-- TODO remove this once maven central replicates the jboss repository -->
+		<!-- Included so the examples sources in the distribution zip build out-of-the-box 
+			with maven -->
+		<repository>
+			<id>red-hat-repository-techpreview</id>
+			<name>red-hat-repository-techpreview</name>
+			<url>https://maven.repository.redhat.com/techpreview/all/</url>
+			<layout>default</layout>
+			<releases>
+				<enabled>true</enabled>
+				<updatePolicy>never</updatePolicy>
+			</releases>
+			<snapshots>
+				<enabled>true</enabled>
+				<updatePolicy>daily</updatePolicy>
+			</snapshots>
+		</repository>
+	</repositories>
+	<pluginRepositories>
+		<pluginRepository>
+			<id>redhat-techpreview-all-repository</id>
+			<url>https://maven.repository.redhat.com/techpreview/all/</url>
+			<releases>
+				<enabled>true</enabled>
+			</releases>
+			<snapshots>
+				<enabled>false</enabled>
+			</snapshots>
+		</pluginRepository>
+	</pluginRepositories>
+
+</project>
