@@ -1,8 +1,5 @@
 package com.redhat.vizuri.test;
 
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,7 +13,6 @@ import org.jbpm.services.task.identity.JBossUserGroupCallbackImpl;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.kie.api.KieServices;
-import org.kie.api.runtime.EnvironmentName;
 import org.kie.api.runtime.KieContainer;
 import org.kie.api.runtime.KieSession;
 import org.kie.api.runtime.manager.RuntimeEngine;
@@ -29,32 +25,20 @@ import org.kie.internal.runtime.manager.context.EmptyContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import bitronix.tm.TransactionManagerServices;
 import bitronix.tm.resource.ResourceRegistrar;
 import bitronix.tm.resource.common.XAResourceProducer;
 import bitronix.tm.resource.jdbc.PoolingDataSource;
 
-public class ProcessTestLocal {
+public class ProcessTestLocalMobileClaim {
 
-	private static final Logger LOG = LoggerFactory.getLogger(ProcessTestLocal.class);
+	private static final Logger LOG = LoggerFactory.getLogger(ProcessTestLocalMobileClaim.class);
 	private static RuntimeManager manager ;
 
 	@BeforeClass
 	public  static void setupBeforeClass(){
 		
 		PoolingDataSource ds = setupPoolingDataSource();
-//		try {
-//			Connection conn = ds.getConnection();
-//			Statement stm = conn.createStatement();
-//			stm.execute("insert into PROCESSINSTANCELOG (ID,PROCESSINSTANCEID) values (1,'22')");
-//		} catch (SQLException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
 //		
-//		if(true){
-//			return;
-//		}
 		 EntityManagerFactory emf = Persistence.createEntityManagerFactory("com.redhat.vizuri.jbpm.domain", null);
         
 		KieServices kieServices = KieServices.Factory.get();
@@ -64,9 +48,7 @@ public class ProcessTestLocal {
 		builder.knowledgeBase(kieContainer.getKieBase("mobile-claim-kbase"))
 		.userGroupCallback(new JBossUserGroupCallbackImpl("classpath:/roles.properties"))
 		.entityManagerFactory(emf)
-		//.persistence(true)
-	//	.addEnvironmentEntry(EnvironmentName.TRANSACTION_MANAGER, TransactionManagerServices.getTransactionManager());
-		//.persistence(true)
+		
 		;
 		
 		
@@ -91,8 +73,11 @@ public class ProcessTestLocal {
 		
 		KieSession kieSession = engine.getKieSession();
 		Map<String, Object> params = new HashMap();
-		params.put("processReaquest", "yes");
-		ProcessInstance instance = kieSession.startProcess("mobile-claims-bpm.adhoc-test", params);
+		params.put("processReauest", "yes");
+		String processId = "mobile-claims-bpm.mobile-claim-process";
+		ProcessInstance instance = kieSession.startProcess(processId, params);
+		
+		
 		LOG.info("instance id : " + instance.getId());
 
 	}

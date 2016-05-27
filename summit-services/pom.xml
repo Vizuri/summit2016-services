@@ -14,7 +14,8 @@
 
 		<!-- Define the version of the JBoss BOMs we want to import. The JBoss 
 			BOMs specify tested stacks. -->
-		<version.jboss.bom.eap>6.3.2.GA</version.jboss.bom.eap>
+		<!-- <version.jboss.bom.eap>6.3.2.GA</version.jboss.bom.eap> -->
+		<version.jboss.bom.eap>6.4.8.GA</version.jboss.bom.eap>
 		<bpms.version>6.4.0.Final</bpms.version>
 		<version.war.plugin>2.2</version.war.plugin>
 	</properties>
@@ -45,13 +46,9 @@
 				<scope>import</scope>
 				<type>pom</type>
 			</dependency>
-			<dependency>
-				<groupId>org.jboss.bom.eap</groupId>
-				<artifactId>jboss-javaee-6.0-with-hibernate</artifactId>
-				<version>${version.jboss.bom.eap}</version>
-				<type>pom</type>
-				<scope>import</scope>
-			</dependency>
+			<!-- <dependency> <groupId>org.jboss.bom.eap</groupId> <artifactId>jboss-javaee-6.0-with-hibernate</artifactId> 
+				<version>${version.jboss.bom.eap}</version> <type>pom</type> <scope>import</scope> 
+				</dependency> -->
 		</dependencies>
 	</dependencyManagement>
 	<dependencies>
@@ -84,7 +81,8 @@
 			JBoss EAP 6 -->
 		<dependency>
 			<groupId>org.hibernate.javax.persistence</groupId>
-			<artifactId>hibernate-jpa-2.0-api</artifactId>
+			<artifactId>hibernate-jpa-2.1-api</artifactId>
+			<version>1.0.0.Final</version>
 			<scope>provided</scope>
 		</dependency>
 
@@ -95,10 +93,13 @@
 			<artifactId>jboss-ejb-api_3.1_spec</artifactId>
 			<scope>provided</scope>
 		</dependency>
+		<!-- <dependency> <groupId>javax</groupId> <artifactId>javaee-api</artifactId> 
+			<version>6.0</version> <scope>provided</scope> </dependency> -->
 		<dependency>
-			<groupId>javax</groupId>
-			<artifactId>javaee-api</artifactId>
-			<version>6.0</version>
+			<groupId>org.jboss.spec</groupId>
+			<artifactId>jboss-javaee-6.0</artifactId>
+			<version>1.0.0.Final</version>
+			<type>pom</type>
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
@@ -121,6 +122,7 @@
 			<groupId>org.hibernate</groupId>
 			<artifactId>hibernate-entitymanager</artifactId>
 			<optional>true</optional>
+			<version>5.1.0.Final  </version>
 			<scope>provided</scope>
 		</dependency>
 
@@ -131,7 +133,7 @@
 		</dependency>
 
 
-	<!-- JBPM Dependencies -->
+		<!-- JBPM Dependencies -->
 		<dependency>
 			<groupId>org.kie</groupId>
 			<artifactId>kie-api</artifactId>
@@ -208,7 +210,7 @@
 			<artifactId>drools-workbench-models-guided-dtable</artifactId>
 			<scope>compile</scope>
 		</dependency>
-	
+
 
 		<!-- test -->
 		<dependency>

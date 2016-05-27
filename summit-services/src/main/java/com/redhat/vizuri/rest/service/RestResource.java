@@ -12,12 +12,14 @@ import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import org.jbpm.bpmn2.handler.ReceiveTaskHandler;
+import org.jbpm.process.instance.impl.demo.SystemOutWorkItemHandler;
+import org.jbpm.runtime.manager.impl.DefaultRegisterableItemsFactory;
 import org.jbpm.services.task.identity.JBossUserGroupCallbackImpl;
 import org.kie.api.KieServices;
 import org.kie.api.runtime.KieContainer;
@@ -27,6 +29,7 @@ import org.kie.api.runtime.manager.RuntimeEnvironmentBuilder;
 import org.kie.api.runtime.manager.RuntimeManager;
 import org.kie.api.runtime.manager.RuntimeManagerFactory;
 import org.kie.api.runtime.process.ProcessInstance;
+import org.kie.api.runtime.process.WorkItemHandler;
 import org.kie.internal.runtime.manager.context.EmptyContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,9 +49,9 @@ public class RestResource {
 	
 	private static final Logger LOG = LoggerFactory.getLogger(RestResource.class);
 	
-	private static final String deploymentId = "com.vizuri.demo.freedommortgage:RetailMortgageUnderwriting:1.0-SNAPSHOT";
+	//private static final String deploymentId = "com.vizuri.demo.freedommortgage:RetailMortgageUnderwriting:1.0-SNAPSHOT";
 	private static final String applicationContext = "http://localhost:8080/business-central";
-
+	private static final String deploymentId = "com.redhat.vizuri.insurance:mobile-claims-bpm:1.0-SNAPSHOT";
 	//String processInstanceId = "RetailMortgageUnderwriting.UnderWritingStart";
 	
 //	@Inject
@@ -60,14 +63,18 @@ public class RestResource {
 	@Produces(MediaType.TEXT_PLAIN)
 	@Consumes(MediaType.APPLICATION_JSON)
 	public Long startProcess(Map jsonMap){
-		
+		LOG.info("inside processId : ");
+		LOG.info("jsonMap : {}",jsonMap);
 		RuntimeEngine engine = manager.getRuntimeEngine(EmptyContext.get());
 
 		KieSession kieSession = engine.getKieSession();
 		Map<String, Object> params = new HashMap();
-		params.put("processReaquest", "yes");
-		ProcessInstance instance = kieSession.startProcess("mobile-claims-bpm.adhoc-test", params);
+		params.put("processRequest", "yes");
+		ProcessInstance instance = kieSession.startProcess(processId, params);
 		LOG.info("instance id : " + instance.getId());
+		
+		kieSession.signalEvent("adjuster-review", params, instance.getId());
+		
 		return instance.getId();
 	}
 	
@@ -85,19 +92,27 @@ public class RestResource {
 	public void init(){
 		buildRunTime();
 	}
+	
+	private String defaultKbase = "mobile-claim-kbase";
+	private String processId = "mobile-claims-bpm.mobile-claim-process";
 	private void buildRunTime(){
 			if(manager != null){
 				return;
 			}
 		 	//EntityManagerFactory emf = Persistence.createEntityManagerFactory("com.redhat.vizuri.jbpm.domain", null);
-	        
+			DefaultRegisterableItemsFactory df = new DefaultRegisterableItemsFactory();
+			df.addWorkItemHandler("Manual Task",SystemOutWorkItemHandler.class);
+			df.addWorkItemHandler("Receive Task", ReceiveTaskHandler.class);
+			
+			
 			KieServices kieServices = KieServices.Factory.get();
 			KieContainer kieContainer = kieServices.getKieClasspathContainer();
 			LOG.info("logger : {}",kieContainer);
 			RuntimeEnvironmentBuilder builder = RuntimeEnvironmentBuilder.Factory.get().newDefaultBuilder();
-			builder.knowledgeBase(kieContainer.getKieBase())
+			builder.knowledgeBase(kieContainer.getKieBase(defaultKbase))
 			.userGroupCallback(new JBossUserGroupCallbackImpl("classpath:/roles.properties"))
 			.entityManagerFactory(emf)
+			.registerableItemsFactory(df)
 			//.persistence(true)
 		//	.addEnvironmentEntry(EnvironmentName.TRANSACTION_MANAGER, TransactionManagerServices.getTransactionManager());
 			//.persistence(true)
@@ -106,10 +121,10 @@ public class RestResource {
 			
 			;
 			LOG.info("kieContainer.getReleaseId() {}",kieContainer.getReleaseId());
-			String releaseId = "com.redhat.vizuri.insurance:mobile-claims-bpm:1.0-SNAPSHOT";
+			
 			//releaseId = "vizuri-summit-2016:mobile-claim-rules:1.0-SNAPSHOT";
 			LOG.info("builder : {}",builder);
-			manager =RuntimeManagerFactory.Factory.get().newPerProcessInstanceRuntimeManager(builder.get(),releaseId);
+			manager =RuntimeManagerFactory.Factory.get().newPerProcessInstanceRuntimeManager(builder.get(),deploymentId);
 	}
 //	@GET
 //	public Response testDummy() {
