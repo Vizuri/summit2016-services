@@ -1,19 +1,13 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-<!-- 
-	<parent>
-		<groupId>org.jbpm</groupId>
-		<artifactId>jbpm</artifactId>
-		<version>6.4.0.Final-redhat-3</version>
-	</parent> -->
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>com.redhat.vizuri</groupId>
-	<artifactId>vizuri_summit_execution</artifactId>
+	<groupId>com.redhat.vizuri.insurance</groupId>
+	<artifactId>mobile-claim-parent</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>pom</packaging>
 	<modules>
-		<module>process-domain</module>
-		<module>summit-services</module>
+		<module>mobile-claim-domain</module>
+		<module>mobile-claim-rest</module>
 	</modules>
 
 	<properties>
