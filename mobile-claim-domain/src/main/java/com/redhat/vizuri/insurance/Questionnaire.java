@@ -2,6 +2,7 @@ package com.redhat.vizuri.insurance;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 public class Questionnaire implements Serializable {
@@ -11,6 +12,8 @@ public class Questionnaire implements Serializable {
 	private String name;
 	private List<Question> questions = new ArrayList<Question>();
 	private List<Answer> answers = new ArrayList<Answer>();
+	private String completedBy;
+	private Date completedDate;
 	
 	public Questionnaire() {
 		super();
@@ -54,6 +57,22 @@ public class Questionnaire implements Serializable {
 	
 	public void addQuestion(Question question) {
 		this.questions.add(question);
+	}
+	
+	public String getCompletedBy() {
+		return completedBy;
+	}
+
+	public void setCompletedBy(String completedBy) {
+		this.completedBy = completedBy;
+	}
+
+	public Date getCompletedDate() {
+		return completedDate;
+	}
+
+	public void setCompletedDate(Date completedDate) {
+		this.completedDate = completedDate;
 	}
 
 	@Override

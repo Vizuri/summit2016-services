@@ -10,17 +10,11 @@ public class Incident implements Serializable {
 	private IncidentType type;
 	private String description;
 	private Date incidentDate;
+	private String stateCode;
+	private String zipCode;
 	
 	public Incident() {
 		super();
-	}
-
-	public Incident(Long id, IncidentType type, String description, Date incidentDate) {
-		super();
-		this.id = id;
-		this.type = type;
-		this.description = description;
-		this.incidentDate = incidentDate;
 	}
 
 	public Long getId() {
@@ -54,12 +48,27 @@ public class Incident implements Serializable {
 	public void setIncidentDate(Date incidentDate) {
 		this.incidentDate = incidentDate;
 	}
-	
+
+	public String getStateCode() {
+		return stateCode;
+	}
+
+	public void setStateCode(String stateCode) {
+		this.stateCode = stateCode;
+	}
+
+	public String getZipCode() {
+		return zipCode;
+	}
+
+	public void setZipCode(String zipCode) {
+		this.zipCode = zipCode;
+	}
 
 	@Override
 	public String toString() {
 		return "Incident [id=" + id + ", type=" + type + ", description=" + description + ", incidentDate="
-				+ incidentDate + "]";
+				+ incidentDate + ", stateCode=" + stateCode + ", zipCode=" + zipCode + "]";
 	}
 
 	@Override

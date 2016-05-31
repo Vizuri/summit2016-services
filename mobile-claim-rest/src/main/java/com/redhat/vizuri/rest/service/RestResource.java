@@ -30,6 +30,10 @@ import org.kie.internal.runtime.manager.context.EmptyContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.redhat.vizuri.brms.service.RuleProcessor;
+import com.redhat.vizuri.insurance.Incident;
+import com.redhat.vizuri.insurance.Questionnaire;
+
 @Path("/vizuri/summit")
 
 public class RestResource {
@@ -41,6 +45,8 @@ public class RestResource {
 	private EntityManagerFactory emf;
 	
 	private static final Logger LOG = LoggerFactory.getLogger(RestResource.class);
+	
+	private RuleProcessor ruleProcessor = null;
 	
 	@POST
 	@Path("/startprocess")
@@ -58,11 +64,35 @@ public class RestResource {
 		return instance.getId();
 	}
 	
+	@POST
+	@Path("/customer-incident")
+	@Produces(MediaType.APPLICATION_JSON)
+	@Consumes(MediaType.APPLICATION_JSON)
+	public Response initCustomerQuestionnaire(Incident incident) {
+		try {
+			Questionnaire questionnaire = ruleProcessor.getQuestionnaireForCustomer(incident);
+			LOG.info("Created questionnaire: " + questionnaire);
+			return sendResponse(200, questionnaire);
+		} catch (Exception ex) {
+			LOG.error("Exception in initCustomerQuestionnaire", ex);
+			return Response.serverError().entity(new ErrorResponse("Exception in initCustomerQuestionnaire, error: " + ex.getMessage() + "\n" + ex.getStackTrace())).build();
+		}
+	}
+	
 	
 	@GET
 	@Produces(MediaType.TEXT_PLAIN)
 	public Response testDummy() {
 		return Response.ok("success", MediaType.TEXT_PLAIN).build();
+	}
+	
+	private Response sendResponse(int status, Object result){
+		
+		return Response.status(status).header("Access-Control-Allow-Origin", "*")
+				.header("Access-Control-Allow-Headers", "origin, content-type, accept, authorization")
+				.header("Access-Control-Allow-Credentials", "true")
+				.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD")
+				.header("Access-Control-Max-Age", "1209601").entity(result).build();
 	}
 	
 	
@@ -71,6 +101,7 @@ public class RestResource {
 	@PostConstruct
 	public void init(){
 		buildRunTime();
+		ruleProcessor = new RuleProcessor();
 	}
 	private void buildRunTime(){
 			if(manager != null){

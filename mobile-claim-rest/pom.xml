@@ -106,8 +106,6 @@
 			<version>2.1.4</version>
 		</dependency>
 
-
-
 		<dependency>
 			<groupId>org.hibernate</groupId>
 			<artifactId>hibernate-entitymanager</artifactId>
@@ -121,7 +119,17 @@
 			<artifactId>mobile-claims-bpm</artifactId>
 			<version>1.0-SNAPSHOT</version>
 		</dependency>
-
+		
+		<dependency>
+			<groupId>com.redhat.vizuri.insurance</groupId>
+			<artifactId>mobile-claim-domain</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>org.kie</groupId>
+			<artifactId>kie-ci</artifactId>
+		</dependency>
 
 	<!-- JBPM Dependencies -->
 		<dependency>
@@ -206,7 +214,6 @@
 		<dependency>
 			<groupId>org.kie.remote</groupId>
 			<artifactId>kie-remote-client</artifactId>
-
 			<scope>test</scope>
 		</dependency>
 		<dependency>
@@ -226,9 +233,6 @@
 			<artifactId>jbpm-test</artifactId>
 			<scope>test</scope>
 		</dependency>
-
-
-
 	</dependencies>
 
 	<build>

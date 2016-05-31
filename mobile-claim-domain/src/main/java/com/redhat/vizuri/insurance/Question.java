@@ -1,29 +1,40 @@
 package com.redhat.vizuri.insurance;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Question implements Serializable {
 	private static final long serialVersionUID = 5231991088082695491L;
 
 	private String questionId;
+	private Long questionnaireId;
 	private String groupId;
 	private String description;
-	private String answerType;
-	private String group;
-	private String mappedObject;
-	private String mappedProperty;
+	private AnswerType answerType;
 	private Boolean required;
 	private Boolean enabled;
-	private int parentId;
-	private String strValue;
 	private int order;
+	private List<String> options = new ArrayList<String>();
 	
+	public Question() {
+		super();
+	}
+
 	public String getQuestionId() {
 		return questionId;
 	}
 
 	public void setQuestionId(String questionId) {
 		this.questionId = questionId;
+	}
+
+	public Long getQuestionnaireId() {
+		return questionnaireId;
+	}
+
+	public void setQuestionnaireId(Long questionnaireId) {
+		this.questionnaireId = questionnaireId;
 	}
 
 	public String getGroupId() {
@@ -42,20 +53,12 @@ public class Question implements Serializable {
 		this.description = description;
 	}
 
-	public String getAnswerType() {
+	public AnswerType getAnswerType() {
 		return answerType;
 	}
 
-	public void setAnswerType(String answerType) {
+	public void setAnswerType(AnswerType answerType) {
 		this.answerType = answerType;
-	}
-
-	public String getGroup() {
-		return group;
-	}
-
-	public void setGroup(String group) {
-		this.group = group;
 	}
 
 	public Boolean getRequired() {
@@ -66,44 +69,12 @@ public class Question implements Serializable {
 		this.required = required;
 	}
 
-	public String getMappedObject() {
-		return mappedObject;
-	}
-
-	public void setMappedObject(String mappedObject) {
-		this.mappedObject = mappedObject;
-	}
-
-	public String getMappedProperty() {
-		return mappedProperty;
-	}
-
-	public void setMappedProperty(String mappedProperty) {
-		this.mappedProperty = mappedProperty;
-	}
-
 	public Boolean getEnabled() {
 		return enabled;
 	}
 
 	public void setEnabled(Boolean enabled) {
 		this.enabled = enabled;
-	}
-
-	public int getParentId() {
-		return parentId;
-	}
-
-	public void setParentId(int parentId) {
-		this.parentId = parentId;
-	}
-	
-	public String getStrValue() {
-		return strValue;
-	}
-
-	public void setStrValue(String strValue) {
-		this.strValue = strValue;
 	}
 
 	public int getOrder() {
@@ -114,29 +85,30 @@ public class Question implements Serializable {
 		this.order = order;
 	}
 
+	public List<String> getOptions() {
+		return options;
+	}
+
+	public void setOptions(List<String> options) {
+		this.options = options;
+	}
+	
+	public void addOption(String option) { 
+		this.options.add(option);
+	}
+
 	@Override
 	public String toString() {
-		return "Question [questionId=" + questionId + ", groupId=" + groupId
-				+ ", description=" + description + ", answerType=" + answerType
-				+ ", group=" + group + ", mappedObject=" + mappedObject
-				+ ", mappedProperty=" + mappedProperty + ", required="
-				+ required + ", enabled=" + enabled + ", parentId=" + parentId
-				+ ", strValue=" + strValue + ", order=" + order + "]";
+		return "Question [questionId=" + questionId + ", questionnaireId=" + questionnaireId + ", groupId=" + groupId
+				+ ", description=" + description + ", answerType=" + answerType + ", required=" + required
+				+ ", enabled=" + enabled + ", order=" + order + ", options=" + options + "]";
 	}
 
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((answerType == null) ? 0 : answerType.hashCode());
-		result = prime * result + ((description == null) ? 0 : description.hashCode());
-		result = prime * result + ((enabled == null) ? 0 : enabled.hashCode());
-		result = prime * result + ((group == null) ? 0 : group.hashCode());
 		result = prime * result + ((questionId == null) ? 0 : questionId.hashCode());
-		result = prime * result + ((mappedObject == null) ? 0 : mappedObject.hashCode());
-		result = prime * result + ((mappedProperty == null) ? 0 : mappedProperty.hashCode());
-		result = prime * result + parentId;
-		result = prime * result + ((required == null) ? 0 : required.hashCode());
 		return result;
 	}
 
@@ -149,49 +121,12 @@ public class Question implements Serializable {
 		if (getClass() != obj.getClass())
 			return false;
 		Question other = (Question) obj;
-		if (answerType == null) {
-			if (other.answerType != null)
-				return false;
-		} else if (!answerType.equals(other.answerType))
-			return false;
-		if (description == null) {
-			if (other.description != null)
-				return false;
-		} else if (!description.equals(other.description))
-			return false;
-		if (enabled == null) {
-			if (other.enabled != null)
-				return false;
-		} else if (!enabled.equals(other.enabled))
-			return false;
-		if (group == null) {
-			if (other.group != null)
-				return false;
-		} else if (!group.equals(other.group))
-			return false;
 		if (questionId == null) {
 			if (other.questionId != null)
 				return false;
 		} else if (!questionId.equals(other.questionId))
 			return false;
-		if (mappedObject == null) {
-			if (other.mappedObject != null)
-				return false;
-		} else if (!mappedObject.equals(other.mappedObject))
-			return false;
-		if (mappedProperty == null) {
-			if (other.mappedProperty != null)
-				return false;
-		} else if (!mappedProperty.equals(other.mappedProperty))
-			return false;
-		if (parentId != other.parentId)
-			return false;
-		if (required == null) {
-			if (other.required != null)
-				return false;
-		} else if (!required.equals(other.required))
-			return false;
 		return true;
 	}
-
+	
 }

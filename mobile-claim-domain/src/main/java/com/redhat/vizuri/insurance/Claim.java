@@ -9,12 +9,13 @@ public class Claim implements Serializable {
 	
 	private Long id;
 	private Incident incident;
+	private Customer customer;
 	private List<Questionnaire> questionnaires = new ArrayList<Questionnaire>();
-	private List<String> photoUrls = new ArrayList<String>();
+	private List<Photo> photos = new ArrayList<Photo>();
 	private boolean approved;
 	private Double statedValue = 0d;
 	private Double adjustedValue = 0d;
-	private List<String> messages = new ArrayList<String>();
+	private List<Comment> comments = new ArrayList<Comment>();
 	
 	public Claim() {
 		super();
@@ -36,6 +37,14 @@ public class Claim implements Serializable {
 		this.incident = incident;
 	}
 
+	public Customer getCustomer() {
+		return customer;
+	}
+
+	public void setCustomer(Customer customer) {
+		this.customer = customer;
+	}
+
 	public List<Questionnaire> getQuestionnaires() {
 		return questionnaires;
 	}
@@ -48,16 +57,16 @@ public class Claim implements Serializable {
 		this.questionnaires.add(q);
 	}
 
-	public List<String> getPhotoUrls() {
-		return photoUrls;
+	public List<Photo> getPhotos() {
+		return photos;
 	}
 
-	public void setPhotoUrls(List<String> photoUrls) {
-		this.photoUrls = photoUrls;
+	public void setPhotos(List<Photo> photos) {
+		this.photos = photos;
 	}
 	
-	public void addPhotoUrl(String photoUrl) {
-		this.photoUrls.add(photoUrl);
+	public void addPhoto(Photo photo) {
+		this.photos.add(photo);
 	}
 
 	public boolean isApproved() {
@@ -84,23 +93,23 @@ public class Claim implements Serializable {
 		this.adjustedValue = adjustedValue;
 	}
 
-	public List<String> getMessages() {
-		return messages;
+	public List<Comment> getComments() {
+		return comments;
 	}
 
-	public void setMessages(List<String> messages) {
-		this.messages = messages;
+	public void setComments(List<Comment> comments) {
+		this.comments = comments;
 	}
 	
-	public void addMessage(String message) {
-		this.messages.add(message);
+	public void addComment(Comment comment) {
+		this.comments.add(comment);
 	}
 
 	@Override
 	public String toString() {
-		return "Claim [id=" + id + ", incident=" + incident + ", questionnaires=" + questionnaires + ", photoUrls="
-				+ photoUrls + ", approved=" + approved + ", statedValue=" + statedValue + ", adjustedValue="
-				+ adjustedValue + ", messages=" + messages + "]";
+		return "Claim [id=" + id + ", incident=" + incident + ", questionnaires=" + questionnaires + ", photos="
+				+ photos + ", approved=" + approved + ", statedValue=" + statedValue + ", adjustedValue="
+				+ adjustedValue + ", messages=" + comments + "]";
 	}
 
 	@Override
