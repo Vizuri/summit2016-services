@@ -79,6 +79,21 @@ public class RestResource {
 		}
 	}
 	
+	@POST
+	@Path("/update-questions")
+	@Produces(MediaType.APPLICATION_JSON)
+	@Consumes(MediaType.APPLICATION_JSON)
+	public Response updateQuestions(Questionnaire questionnaire) {
+		try {
+			ruleProcessor.updateQuestionnaire(questionnaire);
+			LOG.info("Updated questionnaire: " + questionnaire);
+			return sendResponse(200,  questionnaire);
+		} catch (Exception ex) {
+			LOG.error("Exception in updateQuestions", ex);
+			return Response.serverError().entity(new ErrorResponse("Exception in updateQuestions, error: " + ex.getMessage() + "\n" + ex.getStackTrace())).build();
+		}
+	}
+	
 	
 	@GET
 	@Produces(MediaType.TEXT_PLAIN)

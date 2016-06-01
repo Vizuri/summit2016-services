@@ -14,6 +14,7 @@ import org.kie.api.runtime.ClassObjectFilter;
 import org.kie.api.runtime.KieContainer;
 import org.kie.api.runtime.KieSession;
 
+import com.redhat.vizuri.insurance.Answer;
 import com.redhat.vizuri.insurance.Incident;
 import com.redhat.vizuri.insurance.Question;
 import com.redhat.vizuri.insurance.Questionnaire;
@@ -89,6 +90,31 @@ public class RuleProcessor {
 		return quoteSession;
 	}
 	
+	public void updateQuestionnaire(Questionnaire questionnaire) {
+		KieSession kSession = null;
+		try {
+			kSession = createNewQuoteSession(false);
+			
+			for (Question q : questionnaire.getQuestions()) {
+				kSession.insert(q);
+			}
+			
+			for (Answer a : questionnaire.getAnswers()) {
+				kSession.insert(a);
+			}
+			
+			log.info("Firing agenda group: " + AGENDA_SYNC_ANSWERS);
+			kSession.getAgenda().getAgendaGroup(AGENDA_SYNC_ANSWERS).setFocus();
+			int ruleCount = kSession.fireAllRules();
+			log.info("Fired " + ruleCount + " rules.");
+		} catch (Exception e) {
+			log.error("Exception in updateQuestionnaire ["+AGENDA_SYNC_ANSWERS + ", " + questionnaire +"]",e);
+			throw e;
+		} finally {
+			kSession.dispose();
+		}
+	}
+	
 	public Questionnaire getQuestionnaireForCustomer(Incident incident){
 		log.info("Inside getQuestionnaireForCustomer for incident: "+ incident);
 		return getQuestionnaire(incident, AGENDA_CUSTOMER_QUESTIONS);
@@ -110,9 +136,11 @@ public class RuleProcessor {
 					
 			log.info("Fire agenda group: " + constructionAgendaGroup);
 			kSession.getAgenda().getAgendaGroup(constructionAgendaGroup).setFocus();
-			kSession.fireAllRules();
+			int ruleCount = kSession.fireAllRules();
+			log.info("Fired " + ruleCount + " rules.");
 			kSession.getAgenda().getAgendaGroup(AGENDA_UPDATE_QUESTIONS).setFocus();
-			kSession.fireAllRules();
+			ruleCount = kSession.fireAllRules();
+			log.info("Fired " + ruleCount + " rules.");
 			
 			questionnaires = getFacts(kSession, Questionnaire.class);
 			

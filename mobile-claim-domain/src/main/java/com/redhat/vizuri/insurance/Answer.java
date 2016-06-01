@@ -18,6 +18,13 @@ public class Answer implements Serializable {
 	public Answer() {
 	}
 
+	public Answer(String questionId, String strValue) {
+		super();
+		this.questionId = questionId;
+		this.strValue = strValue;
+	}
+
+
 	public String getQuestionId() {
 		return questionId;
 	}

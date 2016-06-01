@@ -12,8 +12,8 @@ public class Question implements Serializable {
 	private String groupId;
 	private String description;
 	private AnswerType answerType;
-	private Boolean required;
-	private Boolean enabled;
+	private Boolean required = false;
+	private Boolean enabled = false;
 	private int order;
 	private List<String> options = new ArrayList<String>();
 	
