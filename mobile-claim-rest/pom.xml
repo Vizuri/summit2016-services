@@ -20,7 +20,7 @@
 
 		<maven.compiler.target>1.8</maven.compiler.target>
 		<maven.compiler.source>1.8</maven.compiler.source>
-	<skipTests>true</skipTests>
+		<skipTests>true</skipTests>
 	</properties>
 
 	<dependencyManagement>
@@ -48,6 +48,14 @@
 				<version>1.0.7.Final</version>
 				<scope>import</scope>
 				<type>pom</type>
+			</dependency>
+
+			<dependency>
+				<groupId>org.jboss.spec</groupId>
+				<artifactId>jboss-javaee-6.0</artifactId>
+				<version>1.0.0.Final</version>
+				<type>pom</type>
+				<scope>import</scope>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
@@ -85,13 +93,13 @@
 			<artifactId>jboss-ejb-api_3.1_spec</artifactId>
 			<scope>provided</scope>
 		</dependency>
+
 		<dependency>
-			<groupId>org.jboss.spec</groupId>
-			<artifactId>jboss-javaee-6.0</artifactId>
-			<version>1.0.0.Final</version>
-			<type>pom</type>
+			<groupId>org.jboss.spec.javax.servlet</groupId>
+			<artifactId>jboss-servlet-api_3.0_spec</artifactId>
 			<scope>provided</scope>
 		</dependency>
+
 		<dependency>
 			<groupId>postgresql</groupId>
 			<artifactId>postgresql</artifactId>
@@ -99,12 +107,7 @@
 			<scope>provided</scope>
 		</dependency>
 		<!-- Internal dependencies -->
-		<dependency>
-			<groupId>org.codehaus.btm</groupId>
-			<artifactId>btm</artifactId>
-			<scope>test</scope>
-			<version>2.1.4</version>
-		</dependency>
+
 
 		<dependency>
 			<groupId>org.hibernate</groupId>
@@ -209,11 +212,17 @@
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
-		  <groupId>org.jbpm</groupId>
-		  <artifactId>jbpm-document</artifactId>
+			<groupId>org.jbpm</groupId>
+			<artifactId>jbpm-document</artifactId>
 		</dependency>
 
 		<!-- test -->
+		<dependency>
+			<groupId>org.codehaus.btm</groupId>
+			<artifactId>btm</artifactId>
+			<scope>test</scope>
+			<version>2.1.4</version>
+		</dependency>
 		<dependency>
 			<groupId>org.kie.remote</groupId>
 			<artifactId>kie-remote-client</artifactId>
