@@ -208,7 +208,10 @@
 			<artifactId>drools-workbench-models-guided-dtable</artifactId>
 			<scope>compile</scope>
 		</dependency>
-
+		<dependency>
+		  <groupId>org.jbpm</groupId>
+		  <artifactId>jbpm-document</artifactId>
+		</dependency>
 
 		<!-- test -->
 		<dependency>

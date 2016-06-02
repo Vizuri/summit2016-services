@@ -1,6 +1,9 @@
 package com.redhat.vizuri.rest.service;
 
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,9 +22,22 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import org.apache.commons.io.IOUtils;
+import org.drools.core.command.runtime.process.SetProcessInstanceVariablesCommand;
 import org.drools.core.command.runtime.process.SignalEventCommand;
+import org.drools.core.marshalling.impl.ClassObjectMarshallingStrategyAcceptor;
+import org.drools.core.marshalling.impl.SerializablePlaceholderResolverStrategy;
+import org.drools.persistence.jpa.marshaller.JPAPlaceholderResolverStrategy;
+import org.jbpm.bpmn2.handler.ReceiveTaskHandler;
+import org.jbpm.document.Document;
+import org.jbpm.document.marshalling.DocumentMarshallingStrategy;
+import org.jbpm.document.service.impl.DocumentStorageServiceImpl;
+import org.jbpm.process.instance.impl.demo.SystemOutWorkItemHandler;
+import org.jbpm.runtime.manager.impl.DefaultRegisterableItemsFactory;
 import org.jbpm.services.task.identity.JBossUserGroupCallbackImpl;
 import org.kie.api.KieServices;
+import org.kie.api.marshalling.ObjectMarshallingStrategy;
+import org.kie.api.runtime.EnvironmentName;
 import org.kie.api.runtime.KieContainer;
 import org.kie.api.runtime.KieSession;
 import org.kie.api.runtime.manager.RuntimeEngine;
@@ -29,6 +45,7 @@ import org.kie.api.runtime.manager.RuntimeEnvironmentBuilder;
 import org.kie.api.runtime.manager.RuntimeManager;
 import org.kie.api.runtime.manager.RuntimeManagerFactory;
 import org.kie.api.runtime.process.ProcessInstance;
+import org.kie.api.runtime.process.WorkflowProcessInstance;
 import org.kie.api.task.TaskService;
 import org.kie.api.task.model.Task;
 import org.kie.internal.runtime.manager.context.ProcessInstanceIdContext;
@@ -50,6 +67,10 @@ public class RestResource {
 	private EntityManagerFactory emf;
 	
 	private static final Logger LOG = LoggerFactory.getLogger(RestResource.class);
+
+	private static final String ADD_COMMENTS_SIGNAL = "add-comments";
+
+	private static final String UPLOAD_PHOTO_SIGNAL = "upload-photo";
 	private static String  ADJUSTER_REVIEW_SIGNAL ="Adjuster Review";
 	private RuleProcessor ruleProcessor = null;
 	
@@ -69,8 +90,79 @@ public class RestResource {
 		return instance.getId();
 	}
 	
+	@POST
+	@Path("/upload-photo/{processInstanceId}")
+	@Produces(MediaType.APPLICATION_JSON)
+	@Consumes(MediaType.APPLICATION_OCTET_STREAM)
+	public Response uploadPhoto(@Context HttpServletRequest request, @PathParam("processInstanceId") Long processInstanceId){
+		LOG.info("inside uploadPhoto ");
+		RuntimeEngine engine = manager.getRuntimeEngine(ProcessInstanceIdContext.get(processInstanceId));
+		KieSession kieSession = engine.getKieSession();
+		//ProcessInstance processInstance = kieSession.getProcessInstance(processInstanceId);
+		SetProcessInstanceVariablesCommand cmd = new SetProcessInstanceVariablesCommand();
+		cmd.setProcessInstanceId(processInstanceId);
+		Map<String,Object> variables = new HashMap();
+		
+		byte[] content =  {};//"yet another document content".getBytes();
+		try {
+			content = IOUtils.toByteArray(request.getInputStream());
+		} catch (IOException e) {
+			content = "Error Occured getting bytes".getBytes();
+			LOG.error("",e);
+		}
+		//byte[] content = "yet another document content".getBytes();
+		DocumentStorageServiceImpl docServ = new DocumentStorageServiceImpl();
+		Document photo = docServ.buildDocument("mydoc"+System.currentTimeMillis(), content.length, new Date(), new HashMap<String, String>());
+		
+		docServ.saveDocument(photo, content);
+		Document fromStorage = docServ.getDocument(photo.getIdentifier());
+		
+		variables.put("photo", fromStorage);
+		cmd.setVariables(variables);
+		
+		kieSession.execute(cmd);
+		kieSession.signalEvent(UPLOAD_PHOTO_SIGNAL, null,processInstanceId);
+		Map<String,String> entity = new HashMap();
+		entity.put("status", "photo-upload-success");
+		return Response.ok(entity).build();
+	}
 	
-	 
+	@POST
+	@Produces(MediaType.APPLICATION_JSON)
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Path("/add-comments/{processInstanceId}")
+	public Response addComments(@PathParam("processInstanceId") Long processInstanceId,Map params){
+		LOG.info("addComments >> processInstanceId->{},parmas->{}",processInstanceId,params);
+		
+		RuntimeEngine engine = manager.getRuntimeEngine(ProcessInstanceIdContext.get(processInstanceId));
+		KieSession kieSession = engine.getKieSession();
+		ProcessInstance processInstance = kieSession.getProcessInstance(processInstanceId);
+		//List<VariableInstanceLog> logs = (List<VariableInstanceLog>) engine.getAuditService().findVariableInstances(processInstanceId, "claimComments");
+		WorkflowProcessInstance workflowProcessInstance = (WorkflowProcessInstance) processInstance;
+		ArrayList claimComments = (ArrayList) workflowProcessInstance.getVariable("claimComments");
+		if(claimComments == null){
+			claimComments = new ArrayList();
+		}
+		LOG.info("claimComments {}",claimComments.getClass());
+				
+		SetProcessInstanceVariablesCommand cmd = new SetProcessInstanceVariablesCommand();
+		cmd.setProcessInstanceId(processInstanceId);
+		Map<String,Object> variables = new HashMap();
+		
+		claimComments.add(params.get("claimComments"));
+		variables.put("claimComments", claimComments);
+		cmd.setVariables(variables);
+		
+		kieSession.execute(cmd);
+		kieSession.signalEvent(ADD_COMMENTS_SIGNAL, null, processInstanceId);
+		Map<String,String> entity = new HashMap();
+		entity.put("status", "add-comment-success");
+		
+		LOG.info("addComments done");
+		
+		return Response.ok(entity).build();
+	}
+	
 	@SuppressWarnings("rawtypes")
 	@POST
 	@Path("/doadjuster/{processInstanceId}")
@@ -197,14 +289,25 @@ public class RestResource {
 			if(manager != null){
 				return;
 			}
-	        
+			DefaultRegisterableItemsFactory df = new DefaultRegisterableItemsFactory();
+			//WorkItemHandler restWorkItemHandler = new RESTWorkItemHandler(this.getClass().getClassLoader() ) ;
+			df.addWorkItemHandler("Receive Task", ReceiveTaskHandler.class);
+			df.addWorkItemHandler("Manual Task", SystemOutWorkItemHandler.class);
+			
 			KieServices kieServices = KieServices.Factory.get();
 			KieContainer kieContainer = kieServices.getKieClasspathContainer();
 			LOG.info("logger : {}",kieContainer);
 			RuntimeEnvironmentBuilder builder = RuntimeEnvironmentBuilder.Factory.get().newDefaultBuilder();
-			builder.knowledgeBase(kieContainer.getKieBase())
+			builder.knowledgeBase(kieContainer.getKieBase("mobile-claim-kbase"))
 			.userGroupCallback(new JBossUserGroupCallbackImpl("classpath:/roles.properties"))
 			.entityManagerFactory(emf)
+			.registerableItemsFactory(df)
+			.addEnvironmentEntry(EnvironmentName.OBJECT_MARSHALLING_STRATEGIES, new ObjectMarshallingStrategy[]{
+					new JPAPlaceholderResolverStrategy(emf),
+					new DocumentMarshallingStrategy(),
+					new SerializablePlaceholderResolverStrategy( 
+	                          ClassObjectMarshallingStrategyAcceptor.DEFAULT  )
+			});
 			;
 			
 			
