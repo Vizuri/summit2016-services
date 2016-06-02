@@ -2,6 +2,7 @@ package com.redhat.vizuri.rest.service;
 
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.annotation.PostConstruct;
@@ -12,11 +13,13 @@ import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import org.drools.core.command.runtime.process.SignalEventCommand;
 import org.jbpm.services.task.identity.JBossUserGroupCallbackImpl;
 import org.kie.api.KieServices;
 import org.kie.api.runtime.KieContainer;
@@ -26,7 +29,9 @@ import org.kie.api.runtime.manager.RuntimeEnvironmentBuilder;
 import org.kie.api.runtime.manager.RuntimeManager;
 import org.kie.api.runtime.manager.RuntimeManagerFactory;
 import org.kie.api.runtime.process.ProcessInstance;
+import org.kie.api.task.TaskService;
 import org.kie.internal.runtime.manager.context.EmptyContext;
+import org.kie.internal.runtime.manager.context.ProcessInstanceIdContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,7 +50,7 @@ public class RestResource {
 	private EntityManagerFactory emf;
 	
 	private static final Logger LOG = LoggerFactory.getLogger(RestResource.class);
-	
+	private static String  ADJUSTER_REVIEW_SIGNAL ="Adjuster Review";
 	private RuleProcessor ruleProcessor = null;
 	
 	@POST
@@ -54,15 +59,81 @@ public class RestResource {
 	@Consumes(MediaType.APPLICATION_JSON)
 	public Long startProcess(){
 		
-		RuntimeEngine engine = manager.getRuntimeEngine(EmptyContext.get());
+		RuntimeEngine engine = manager.getRuntimeEngine(ProcessInstanceIdContext.get());
 
 		KieSession kieSession = engine.getKieSession();
 		Map<String, Object> params = new HashMap<String,Object>();
-		params.put("processReaquest", "yes");
-		ProcessInstance instance = kieSession.startProcess("mobile-claims-bpm.adhoc-test", params);
+		
+		ProcessInstance instance = kieSession.startProcess("mobile-claims-bpm.mobile-claim-process", params);
 		LOG.info("instance id : " + instance.getId());
 		return instance.getId();
 	}
+	
+	
+	 
+	@SuppressWarnings("rawtypes")
+	@POST
+	@Path("/doadjuster/{processInstanceId}")
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response doAdjuster(Map<String,Object> taskContent, @PathParam("processInstanceId") Long processInstanceId){
+		
+		LOG.info("inside doAdjuster : taskContent >> {}, processInstanceId >> {}",taskContent,processInstanceId);
+		RuntimeEngine engine = manager.getRuntimeEngine(ProcessInstanceIdContext.get(processInstanceId));
+		/**
+		 * task_complete
+		 * task_adjustedAmount
+		 * task_approved
+		 * task_comment
+		 */
+		KieSession kieSession = engine.getKieSession();
+		SignalEventCommand command = new SignalEventCommand();
+		command.setProcessInstanceId(processInstanceId);
+		Map<String, Object> params = new HashMap<String, Object>();
+		command.setEventType(ADJUSTER_REVIEW_SIGNAL);
+		command.setEvent(params);
+
+		Object commandReturn = kieSession.execute(command);
+		LOG.info("commandReturn {}", commandReturn);
+		
+		TaskService taskService = engine.getTaskService();
+		String caseworker = "caseworker";
+		List<Long> tasksList = taskService.getTasksByProcessInstanceId(processInstanceId);
+
+		
+		for (Long taskId : tasksList) {
+			LOG.info("task id {}", taskId);
+
+			//Map<String, Object> taskContent = new HashMap<String, Object>();
+			//taskContent.put("in_processRequest", "yes");
+			try {
+				taskService.claim(taskId, caseworker);
+				//taskContent = taskService.getTaskContent(taskId);
+				//LOG.info("taskContent : {}",taskContent);
+				LOG.info("claim successful : " + taskId);
+			} catch (Exception e) {
+				LOG.error("error : " + e.getMessage());
+				continue;
+			}
+			
+			LOG.info("now starting taskId {}",taskId);
+			taskService.start(taskId, caseworker);
+			LOG.info("taskId {} started",taskId);
+			
+			taskService.complete(taskId, caseworker, taskContent);
+			LOG.info("complete taskId >> {}",taskId);
+			taskContent = taskService.getTaskContent(taskId);
+
+			
+		}
+		
+		LOG.info("done doAdjuster");
+		
+		return sendResponse(200, taskContent);
+	//	return taskContent;
+	}
+	
+	
 	
 	@POST
 	@Path("/customer-incident")

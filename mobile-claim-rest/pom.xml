@@ -17,10 +17,10 @@
 		<version.jboss.bom.eap>6.4.8.GA</version.jboss.bom.eap>
 		<bpms.version>6.4.0.Final</bpms.version>
 		<version.war.plugin>2.2</version.war.plugin>
-		
+
 		<maven.compiler.target>1.8</maven.compiler.target>
-        <maven.compiler.source>1.8</maven.compiler.source>
-		
+		<maven.compiler.source>1.8</maven.compiler.source>
+	<skipTests>true</skipTests>
 	</properties>
 
 	<dependencyManagement>
@@ -119,19 +119,19 @@
 			<artifactId>mobile-claims-bpm</artifactId>
 			<version>1.0-SNAPSHOT</version>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>com.redhat.vizuri.insurance</groupId>
 			<artifactId>mobile-claim-domain</artifactId>
 			<version>0.0.1-SNAPSHOT</version>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>org.kie</groupId>
 			<artifactId>kie-ci</artifactId>
 		</dependency>
 
-	<!-- JBPM Dependencies -->
+		<!-- JBPM Dependencies -->
 		<dependency>
 			<groupId>org.kie</groupId>
 			<artifactId>kie-api</artifactId>
@@ -233,6 +233,13 @@
 			<artifactId>jbpm-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-simple</artifactId>
+			<version>1.7.5</version>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -241,6 +248,14 @@
 
 		<pluginManagement>
 			<plugins>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-surefire-plugin</artifactId>
+					<!-- <version>2.19.1</version> -->
+					<configuration>
+						<skipTests>${skipTests}</skipTests>
+					</configuration>
+				</plugin>
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-jar-plugin</artifactId>
