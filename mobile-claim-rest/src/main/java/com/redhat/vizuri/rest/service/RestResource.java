@@ -30,7 +30,7 @@ import org.kie.api.runtime.manager.RuntimeManager;
 import org.kie.api.runtime.manager.RuntimeManagerFactory;
 import org.kie.api.runtime.process.ProcessInstance;
 import org.kie.api.task.TaskService;
-import org.kie.internal.runtime.manager.context.EmptyContext;
+import org.kie.api.task.model.Task;
 import org.kie.internal.runtime.manager.context.ProcessInstanceIdContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -99,7 +99,7 @@ public class RestResource {
 		TaskService taskService = engine.getTaskService();
 		String caseworker = "caseworker";
 		List<Long> tasksList = taskService.getTasksByProcessInstanceId(processInstanceId);
-
+		
 		
 		for (Long taskId : tasksList) {
 			LOG.info("task id {}", taskId);
@@ -107,6 +107,10 @@ public class RestResource {
 			//Map<String, Object> taskContent = new HashMap<String, Object>();
 			//taskContent.put("in_processRequest", "yes");
 			try {
+				Map<String,Object> content = taskService.getTaskContent(taskId);
+				if(! ADJUSTER_REVIEW_SIGNAL.equals(content.get("NodeName") ) ){
+					LOG.info("not a adjuster review skipping");
+				}
 				taskService.claim(taskId, caseworker);
 				//taskContent = taskService.getTaskContent(taskId);
 				//LOG.info("taskContent : {}",taskContent);
