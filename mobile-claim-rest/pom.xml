@@ -17,10 +17,10 @@
 		<version.jboss.bom.eap>6.4.8.GA</version.jboss.bom.eap>
 		<bpms.version>6.4.0.Final</bpms.version>
 		<version.war.plugin>2.2</version.war.plugin>
-		
+
 		<maven.compiler.target>1.8</maven.compiler.target>
-        <maven.compiler.source>1.8</maven.compiler.source>
-		
+		<maven.compiler.source>1.8</maven.compiler.source>
+		<skipTests>true</skipTests>
 	</properties>
 
 	<dependencyManagement>
@@ -48,6 +48,14 @@
 				<version>1.0.7.Final</version>
 				<scope>import</scope>
 				<type>pom</type>
+			</dependency>
+
+			<dependency>
+				<groupId>org.jboss.spec</groupId>
+				<artifactId>jboss-javaee-6.0</artifactId>
+				<version>1.0.0.Final</version>
+				<type>pom</type>
+				<scope>import</scope>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
@@ -85,13 +93,13 @@
 			<artifactId>jboss-ejb-api_3.1_spec</artifactId>
 			<scope>provided</scope>
 		</dependency>
+
 		<dependency>
-			<groupId>org.jboss.spec</groupId>
-			<artifactId>jboss-javaee-6.0</artifactId>
-			<version>1.0.0.Final</version>
-			<type>pom</type>
+			<groupId>org.jboss.spec.javax.servlet</groupId>
+			<artifactId>jboss-servlet-api_3.0_spec</artifactId>
 			<scope>provided</scope>
 		</dependency>
+
 		<dependency>
 			<groupId>postgresql</groupId>
 			<artifactId>postgresql</artifactId>
@@ -99,12 +107,7 @@
 			<scope>provided</scope>
 		</dependency>
 		<!-- Internal dependencies -->
-		<dependency>
-			<groupId>org.codehaus.btm</groupId>
-			<artifactId>btm</artifactId>
-			<scope>test</scope>
-			<version>2.1.4</version>
-		</dependency>
+
 
 		<dependency>
 			<groupId>org.hibernate</groupId>
@@ -119,19 +122,19 @@
 			<artifactId>mobile-claims-bpm</artifactId>
 			<version>1.0-SNAPSHOT</version>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>com.redhat.vizuri.insurance</groupId>
 			<artifactId>mobile-claim-domain</artifactId>
 			<version>0.0.1-SNAPSHOT</version>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>org.kie</groupId>
 			<artifactId>kie-ci</artifactId>
 		</dependency>
 
-	<!-- JBPM Dependencies -->
+		<!-- JBPM Dependencies -->
 		<dependency>
 			<groupId>org.kie</groupId>
 			<artifactId>kie-api</artifactId>
@@ -155,6 +158,12 @@
 		</dependency>
 
 		<!-- jBPMN -->
+		<dependency>
+			<groupId>com.google.inject.extensions</groupId>
+			<artifactId>guice-servlet</artifactId>
+			<version>3.0</version>
+		</dependency>
+
 		<dependency>
 			<groupId>org.jbpm</groupId>
 			<artifactId>jbpm-bpmn2</artifactId>
@@ -208,9 +217,18 @@
 			<artifactId>drools-workbench-models-guided-dtable</artifactId>
 			<scope>compile</scope>
 		</dependency>
-
+		<dependency>
+			<groupId>org.jbpm</groupId>
+			<artifactId>jbpm-document</artifactId>
+		</dependency>
 
 		<!-- test -->
+		<dependency>
+			<groupId>org.codehaus.btm</groupId>
+			<artifactId>btm</artifactId>
+			<scope>test</scope>
+			<version>2.1.4</version>
+		</dependency>
 		<dependency>
 			<groupId>org.kie.remote</groupId>
 			<artifactId>kie-remote-client</artifactId>
@@ -233,6 +251,13 @@
 			<artifactId>jbpm-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-simple</artifactId>
+			<version>1.7.5</version>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -241,6 +266,14 @@
 
 		<pluginManagement>
 			<plugins>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-surefire-plugin</artifactId>
+					<!-- <version>2.19.1</version> -->
+					<configuration>
+						<skipTests>${skipTests}</skipTests>
+					</configuration>
+				</plugin>
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-jar-plugin</artifactId>
