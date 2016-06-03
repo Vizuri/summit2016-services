@@ -1,6 +1,7 @@
 package com.redhat.vizuri.test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -33,10 +34,10 @@ import org.kie.api.runtime.manager.RuntimeEngine;
 import org.kie.api.runtime.manager.RuntimeEnvironmentBuilder;
 import org.kie.api.runtime.manager.RuntimeManager;
 import org.kie.api.runtime.manager.RuntimeManagerFactory;
-import org.kie.api.runtime.manager.audit.VariableInstanceLog;
 import org.kie.api.runtime.process.ProcessInstance;
 import org.kie.api.runtime.process.WorkflowProcessInstance;
 import org.kie.api.task.TaskService;
+import org.kie.internal.command.CommandFactory;
 import org.kie.internal.runtime.manager.context.ProcessInstanceIdContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,6 +51,7 @@ public class ProcessTestLocal {
 
 	private static final Logger LOG = LoggerFactory.getLogger(ProcessTestLocal.class);
 	private static final  String  ADJUSTER_REVIEW_SIGNAL ="Adjuster Review";
+	private static final String ADD_COMMENTS_SIGNAL = "add-comments";
 	private static RuntimeManager manager;
 	
 	@BeforeClass
@@ -112,7 +114,10 @@ public class ProcessTestLocal {
 	
 	@Test
 	public void testUpdateProcessVariableComments(){
-		long processInstanceId = 7l;
+
+	
+		
+		long processInstanceId = 3l;
 		RuntimeEngine engine = manager.getRuntimeEngine(ProcessInstanceIdContext.get(processInstanceId));
 		KieSession kieSession = engine.getKieSession();
 		ProcessInstance processInstance = kieSession.getProcessInstance(processInstanceId);
@@ -124,16 +129,21 @@ public class ProcessTestLocal {
 		}
 		LOG.info("claimComments {}",claimComments.getClass());
 				
-		SetProcessInstanceVariablesCommand cmd = new SetProcessInstanceVariablesCommand();
-		cmd.setProcessInstanceId(processInstanceId);
+		SetProcessInstanceVariablesCommand setProcessCommand = new SetProcessInstanceVariablesCommand();
+		setProcessCommand.setProcessInstanceId(processInstanceId);
 		Map<String,Object> variables = new HashMap();
 		
 		claimComments.add("hello"+System.currentTimeMillis());
 		variables.put("claimComments", claimComments);
-		cmd.setVariables(variables);
+		setProcessCommand.setVariables(variables);
 		
-		kieSession.execute(cmd);
+		SignalEventCommand signalEventCommand = new SignalEventCommand();
+		signalEventCommand.setProcessInstanceId(processInstanceId);
+		signalEventCommand.setEventType(ADD_COMMENTS_SIGNAL);
 		
+		kieSession.execute(CommandFactory.newBatchExecution(Arrays.asList(signalEventCommand,setProcessCommand)));
+		//kieSession.execute(CommandFactory.newBatchExecution(commands));
+		//kieSession.signalEvent(ADD_COMMENTS_SIGNAL, null, processInstanceId);
 	}
 	
 	@Test
@@ -155,7 +165,7 @@ public class ProcessTestLocal {
 	
 	@Test
 	public void testPutPhoto(){
-		long processInstanceId = 6l;
+		long processInstanceId = 5l;
 		RuntimeEngine engine = manager.getRuntimeEngine(ProcessInstanceIdContext.get(processInstanceId));
 		KieSession kieSession = engine.getKieSession();
 		//ProcessInstance processInstance = kieSession.getProcessInstance(processInstanceId);
@@ -165,11 +175,11 @@ public class ProcessTestLocal {
 		byte[] content = "yet another document content".getBytes();
 		DocumentStorageServiceImpl docServ = new DocumentStorageServiceImpl();
 		Document photo = docServ.buildDocument("mydoc", content.length, new Date(), new HashMap<String, String>());
+		photo.setContent(content);
+		//docServ.saveDocument(photo, content);
+		//Document fromStorage = docServ.getDocument(photo.getIdentifier());
 		
-		docServ.saveDocument(photo, content);
-		Document fromStorage = docServ.getDocument(photo.getIdentifier());
-		
-		variables.put("photo", fromStorage);
+		variables.put("photo", photo);
 		cmd.setVariables(variables);
 		
 		kieSession.execute(cmd);

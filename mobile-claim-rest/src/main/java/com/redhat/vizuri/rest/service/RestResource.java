@@ -3,12 +3,19 @@ package com.redhat.vizuri.rest.service;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import javax.annotation.PostConstruct;
+import javax.ejb.Singleton;
+import javax.ejb.Startup;
+import javax.ejb.Stateless;
+import javax.ejb.TransactionAttribute;
+import javax.ejb.TransactionAttributeType;
+import javax.ejb.TransactionManagement;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.PersistenceUnit;
 import javax.servlet.http.HttpServletRequest;
@@ -47,7 +54,7 @@ import org.kie.api.runtime.manager.RuntimeManagerFactory;
 import org.kie.api.runtime.process.ProcessInstance;
 import org.kie.api.runtime.process.WorkflowProcessInstance;
 import org.kie.api.task.TaskService;
-import org.kie.api.task.model.Task;
+import org.kie.internal.command.CommandFactory;
 import org.kie.internal.runtime.manager.context.ProcessInstanceIdContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,11 +64,12 @@ import com.redhat.vizuri.insurance.Incident;
 import com.redhat.vizuri.insurance.Questionnaire;
 
 @Path("/vizuri/summit")
-
+@Startup
+@Singleton
 public class RestResource {
 
-	@Context
-	 private HttpServletRequest httpRequest;
+	//@Context
+	// private HttpServletRequest httpRequest;
 	 
 	@PersistenceUnit(unitName = "com.redhat.vizuri.jbpm.domain")
 	private EntityManagerFactory emf;
@@ -71,6 +79,12 @@ public class RestResource {
 	private static final String ADD_COMMENTS_SIGNAL = "add-comments";
 
 	private static final String UPLOAD_PHOTO_SIGNAL = "upload-photo";
+
+	private static final String PROCESS_VAR_CLAIM_COMMENTS = "claimComments";
+
+	private static final String PROCESS_VAR_PHOTO = "photo";
+
+	
 	private static String  ADJUSTER_REVIEW_SIGNAL ="Adjuster Review";
 	private RuleProcessor ruleProcessor = null;
 	
@@ -78,6 +92,7 @@ public class RestResource {
 	@Path("/startprocess")
 	@Produces(MediaType.TEXT_PLAIN)
 	@Consumes(MediaType.APPLICATION_JSON)
+	@TransactionAttribute(TransactionAttributeType.REQUIRED)
 	public Long startProcess(){
 		
 		RuntimeEngine engine = manager.getRuntimeEngine(ProcessInstanceIdContext.get());
@@ -94,14 +109,15 @@ public class RestResource {
 	@Path("/upload-photo/{processInstanceId}")
 	@Produces(MediaType.APPLICATION_JSON)
 	@Consumes(MediaType.APPLICATION_OCTET_STREAM)
+	@TransactionAttribute(TransactionAttributeType.REQUIRED)
 	public Response uploadPhoto(@Context HttpServletRequest request, @PathParam("processInstanceId") Long processInstanceId){
 		LOG.info("inside uploadPhoto ");
 		RuntimeEngine engine = manager.getRuntimeEngine(ProcessInstanceIdContext.get(processInstanceId));
 		KieSession kieSession = engine.getKieSession();
 		//ProcessInstance processInstance = kieSession.getProcessInstance(processInstanceId);
-		SetProcessInstanceVariablesCommand cmd = new SetProcessInstanceVariablesCommand();
-		cmd.setProcessInstanceId(processInstanceId);
-		Map<String,Object> variables = new HashMap();
+		SetProcessInstanceVariablesCommand setProcessCommand = new SetProcessInstanceVariablesCommand();
+		setProcessCommand.setProcessInstanceId(processInstanceId);
+		Map<String,Object> variables = new HashMap<>();
 		
 		byte[] content =  {};//"yet another document content".getBytes();
 		try {
@@ -112,17 +128,23 @@ public class RestResource {
 		}
 		//byte[] content = "yet another document content".getBytes();
 		DocumentStorageServiceImpl docServ = new DocumentStorageServiceImpl();
-		Document photo = docServ.buildDocument("mydoc"+System.currentTimeMillis(), content.length, new Date(), new HashMap<String, String>());
+		Map<String,String> params = new HashMap<>();
+		params.put("app.url", "org.kie.workbench.KIEWebapp/");
+		Document photo = docServ.buildDocument("mydoc"+System.currentTimeMillis(), content.length, new Date(), params);
+		photo.setContent(content);
+		photo = docServ.saveDocument(photo, content);
+		variables.put(PROCESS_VAR_PHOTO, photo);
+		setProcessCommand.setVariables(variables);
 		
-		docServ.saveDocument(photo, content);
-		Document fromStorage = docServ.getDocument(photo.getIdentifier());
 		
-		variables.put("photo", fromStorage);
-		cmd.setVariables(variables);
+		SignalEventCommand signalEventCommand = new SignalEventCommand();
+		signalEventCommand.setProcessInstanceId(processInstanceId);
+		signalEventCommand.setEventType(UPLOAD_PHOTO_SIGNAL);
 		
-		kieSession.execute(cmd);
-		kieSession.signalEvent(UPLOAD_PHOTO_SIGNAL, null,processInstanceId);
-		Map<String,String> entity = new HashMap();
+		kieSession.execute(signalEventCommand);
+		kieSession.execute(setProcessCommand);
+		
+		Map<String,String> entity = new HashMap<>();
 		entity.put("status", "photo-upload-success");
 		return Response.ok(entity).build();
 	}
@@ -131,30 +153,42 @@ public class RestResource {
 	@Produces(MediaType.APPLICATION_JSON)
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Path("/add-comments/{processInstanceId}")
+	@TransactionAttribute(TransactionAttributeType.REQUIRED)
 	public Response addComments(@PathParam("processInstanceId") Long processInstanceId,Map params){
 		LOG.info("addComments >> processInstanceId->{},parmas->{}",processInstanceId,params);
 		
 		RuntimeEngine engine = manager.getRuntimeEngine(ProcessInstanceIdContext.get(processInstanceId));
 		KieSession kieSession = engine.getKieSession();
+	
 		ProcessInstance processInstance = kieSession.getProcessInstance(processInstanceId);
+		
 		//List<VariableInstanceLog> logs = (List<VariableInstanceLog>) engine.getAuditService().findVariableInstances(processInstanceId, "claimComments");
 		WorkflowProcessInstance workflowProcessInstance = (WorkflowProcessInstance) processInstance;
-		ArrayList claimComments = (ArrayList) workflowProcessInstance.getVariable("claimComments");
+		
+		ArrayList claimComments = (ArrayList) workflowProcessInstance.getVariable(PROCESS_VAR_CLAIM_COMMENTS);
 		if(claimComments == null){
 			claimComments = new ArrayList();
 		}
 		LOG.info("claimComments {}",claimComments.getClass());
+		//workflowProcessInstance.setVariable(PROCESS_VAR_CLAIM_COMMENTS, claimComments);
 				
-		SetProcessInstanceVariablesCommand cmd = new SetProcessInstanceVariablesCommand();
-		cmd.setProcessInstanceId(processInstanceId);
+		SetProcessInstanceVariablesCommand setProcessCommand = new SetProcessInstanceVariablesCommand();
+		setProcessCommand.setProcessInstanceId(processInstanceId);
 		Map<String,Object> variables = new HashMap();
 		
-		claimComments.add(params.get("claimComments"));
-		variables.put("claimComments", claimComments);
-		cmd.setVariables(variables);
+		claimComments.add(params.get(PROCESS_VAR_CLAIM_COMMENTS));
+		variables.put(PROCESS_VAR_CLAIM_COMMENTS, claimComments);
 		
-		kieSession.execute(cmd);
-		kieSession.signalEvent(ADD_COMMENTS_SIGNAL, null, processInstanceId);
+		setProcessCommand.setVariables(variables);
+		
+		
+		SignalEventCommand signalEventCommand = new SignalEventCommand();
+		signalEventCommand.setProcessInstanceId(processInstanceId);
+		signalEventCommand.setEventType(ADD_COMMENTS_SIGNAL);
+		
+		kieSession.execute(signalEventCommand);
+		kieSession.execute(setProcessCommand);
+		
 		Map<String,String> entity = new HashMap();
 		entity.put("status", "add-comment-success");
 		
@@ -168,6 +202,7 @@ public class RestResource {
 	@Path("/doadjuster/{processInstanceId}")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
+	@TransactionAttribute(TransactionAttributeType.REQUIRED)
 	public Response doAdjuster(Map<String,Object> taskContent, @PathParam("processInstanceId") Long processInstanceId){
 		
 		LOG.info("inside doAdjuster : taskContent >> {}, processInstanceId >> {}",taskContent,processInstanceId);
@@ -289,6 +324,8 @@ public class RestResource {
 			if(manager != null){
 				return;
 			}
+			
+			System.setProperty("app.url", "org.kie.workbench.KIEWebapp/");
 			DefaultRegisterableItemsFactory df = new DefaultRegisterableItemsFactory();
 			//WorkItemHandler restWorkItemHandler = new RESTWorkItemHandler(this.getClass().getClassLoader() ) ;
 			df.addWorkItemHandler("Receive Task", ReceiveTaskHandler.class);
