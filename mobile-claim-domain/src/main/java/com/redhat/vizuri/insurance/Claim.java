@@ -7,7 +7,7 @@ import java.util.List;
 public class Claim implements Serializable {
 	private static final long serialVersionUID = 8817532564043280353L;
 	
-	private Long id;
+	private String id;
 	private Incident incident;
 	private Customer customer;
 	private List<Questionnaire> questionnaires = new ArrayList<Questionnaire>();
@@ -21,11 +21,11 @@ public class Claim implements Serializable {
 		super();
 	}
 
-	public Long getId() {
+	public String getId() {
 		return id;
 	}
 
-	public void setId(Long id) {
+	public void setId(String id) {
 		this.id = id;
 	}
 
