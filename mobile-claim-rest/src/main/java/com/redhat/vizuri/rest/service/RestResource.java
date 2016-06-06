@@ -119,12 +119,12 @@ public class RestResource {
 	}
 	
 	@POST
-	@Path("/upload-photo/{processInstanceId}")
+	@Path("/upload-photo/{processInstanceId}/{fileName}")
 	@Produces(MediaType.APPLICATION_JSON)
 	@Consumes(MediaType.APPLICATION_OCTET_STREAM)
 	@TransactionAttribute(TransactionAttributeType.REQUIRED)
-	public Response uploadPhoto(@Context HttpServletRequest request, @PathParam("processInstanceId") Long processInstanceId){
-		String fileName = null;
+	public Response uploadPhoto(@Context HttpServletRequest request, @PathParam("processInstanceId") Long processInstanceId,@PathParam("fileName") String fileName){
+		//fileName = null;
 		LOG.info("inside uploadPhoto >> processInstanceId :{}, fileName :{}");
 		RuntimeEngine engine = manager.getRuntimeEngine(ProcessInstanceIdContext.get(processInstanceId));
 		KieSession kieSession = engine.getKieSession();
@@ -132,10 +132,20 @@ public class RestResource {
 		
 		WorkflowProcessInstance workflowProcessInstance = (WorkflowProcessInstance) processInstance;
 		Integer photoCounter  = (Integer) workflowProcessInstance.getVariable(PROCESS_VAR_PHOTO_COUNTER);
+		String photovarName = PROCESS_VAR_PHOTO;
 		if(photoCounter == null || photoCounter < 0 ){
 			photoCounter = 0;
 		}else{
 			photoCounter++;
+			photovarName = PROCESS_VAR_PHOTO+photoCounter;
+			
+			if(photoCounter > 9){
+				photovarName = PROCESS_VAR_PHOTO+ ( photoCounter % 10 );
+				
+				if ( ( photoCounter % 10 ) == 0 ){
+					photovarName = PROCESS_VAR_PHOTO;
+				}
+			}
 		}
 		
 		SetProcessInstanceVariablesCommand setProcessCommand = new SetProcessInstanceVariablesCommand();
@@ -160,7 +170,7 @@ public class RestResource {
 		Document photo = docServ.buildDocument(fileName, content.length, new Date(), params);
 		photo.setContent(content);
 		photo = docServ.saveDocument(photo, content);
-		
+		variables.put(photovarName, photo);
 		
 		/**
 		 * photoCounterByProcess.get(processInstanceId) initially return a -1 counter
@@ -168,17 +178,16 @@ public class RestResource {
 		 * 
 		 * if count is greater that we will user the  remainder value
 		 */
-	
-		if(photoCounter <= 9 ){
-			//1-9 is photo1...photo9
-		//	photoCounterByProcess.get(processInstanceId).getAndIncrement();
-			variables.put(PROCESS_VAR_PHOTO+photoCounter, photo);
-		}else{
-			//anything above 9 will be the remainder of the counter
-		//	photoCounterByProcess.get(processInstanceId).getAndIncrement();
-			variables.put(PROCESS_VAR_PHOTO+ ( photoCounter % 10 ), photo);
-			photoCounter++;
-		}
+//		 if(photoCounter <= 9 ){
+//			//1-9 is photo1...photo9
+//		//	photoCounterByProcess.get(processInstanceId).getAndIncrement();
+//			variables.put(photovarName, photo);
+//		}else{
+//			//anything above 9 will be the remainder of the counter
+//		//	photoCounterByProcess.get(processInstanceId).getAndIncrement();
+//			variables.put(PROCESS_VAR_PHOTO+ ( photoCounter % 10 ), photo);
+//			
+//		}
 		
 		variables.put(PROCESS_VAR_PHOTO_COUNTER, photoCounter);
 		setProcessCommand.setVariables(variables);
