@@ -8,6 +8,9 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.annotation.PostConstruct;
 import javax.ejb.Singleton;
@@ -21,12 +24,14 @@ import javax.persistence.PersistenceUnit;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
+import javax.ws.rs.MatrixParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.PathSegment;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.io.IOUtils;
@@ -84,9 +89,16 @@ public class RestResource {
 
 	private static final String PROCESS_VAR_PHOTO = "photo";
 
+	private static final String PROCESS_VAR_PHOTO_COUNTER = "photoCounter";
+
 	
 	private static String  ADJUSTER_REVIEW_SIGNAL ="Adjuster Review";
 	private RuleProcessor ruleProcessor = null;
+	
+	/**
+	 * When a process is started, photoCounterByProcess will get a initial set of 0 counter
+	 */
+	//private static ConcurrentHashMap<Long, AtomicInteger> photoCounterByProcess = new ConcurrentHashMap<Long, AtomicInteger>();
 	
 	@POST
 	@Path("/startprocess")
@@ -99,9 +111,10 @@ public class RestResource {
 
 		KieSession kieSession = engine.getKieSession();
 		Map<String, Object> params = new HashMap<String,Object>();
-		
+		params.put(PROCESS_VAR_PHOTO_COUNTER, -1);
 		ProcessInstance instance = kieSession.startProcess("mobile-claims-bpm.mobile-claim-process", params);
 		LOG.info("instance id : " + instance.getId());
+		//photoCounterByProcess.put(instance.getId(), new AtomicInteger(0));
 		return instance.getId();
 	}
 	
@@ -111,10 +124,20 @@ public class RestResource {
 	@Consumes(MediaType.APPLICATION_OCTET_STREAM)
 	@TransactionAttribute(TransactionAttributeType.REQUIRED)
 	public Response uploadPhoto(@Context HttpServletRequest request, @PathParam("processInstanceId") Long processInstanceId){
-		LOG.info("inside uploadPhoto ");
+		String fileName = null;
+		LOG.info("inside uploadPhoto >> processInstanceId :{}, fileName :{}");
 		RuntimeEngine engine = manager.getRuntimeEngine(ProcessInstanceIdContext.get(processInstanceId));
 		KieSession kieSession = engine.getKieSession();
-		//ProcessInstance processInstance = kieSession.getProcessInstance(processInstanceId);
+		ProcessInstance processInstance = kieSession.getProcessInstance(processInstanceId);
+		
+		WorkflowProcessInstance workflowProcessInstance = (WorkflowProcessInstance) processInstance;
+		Integer photoCounter  = (Integer) workflowProcessInstance.getVariable(PROCESS_VAR_PHOTO_COUNTER);
+		if(photoCounter == null || photoCounter < 0 ){
+			photoCounter = 0;
+		}else{
+			photoCounter++;
+		}
+		
 		SetProcessInstanceVariablesCommand setProcessCommand = new SetProcessInstanceVariablesCommand();
 		setProcessCommand.setProcessInstanceId(processInstanceId);
 		Map<String,Object> variables = new HashMap<>();
@@ -127,13 +150,37 @@ public class RestResource {
 			LOG.error("",e);
 		}
 		//byte[] content = "yet another document content".getBytes();
-		DocumentStorageServiceImpl docServ = new DocumentStorageServiceImpl();
+		DocumentStorageServiceImpl docServ = new DocumentStorageServiceImpl();	
 		Map<String,String> params = new HashMap<>();
 		params.put("app.url", "org.kie.workbench.KIEWebapp/");
-		Document photo = docServ.buildDocument("mydoc"+System.currentTimeMillis(), content.length, new Date(), params);
+		if(fileName == null){
+			fileName = "insurance-image"+photoCounter+"-"+System.nanoTime();
+		}
+		
+		Document photo = docServ.buildDocument(fileName, content.length, new Date(), params);
 		photo.setContent(content);
 		photo = docServ.saveDocument(photo, content);
-		variables.put(PROCESS_VAR_PHOTO, photo);
+		
+		
+		/**
+		 * photoCounterByProcess.get(processInstanceId) initially return a -1 counter
+		 * we are incrementing first and using a process varname+counter as process variable
+		 * 
+		 * if count is greater that we will user the  remainder value
+		 */
+	
+		if(photoCounter <= 9 ){
+			//1-9 is photo1...photo9
+		//	photoCounterByProcess.get(processInstanceId).getAndIncrement();
+			variables.put(PROCESS_VAR_PHOTO+photoCounter, photo);
+		}else{
+			//anything above 9 will be the remainder of the counter
+		//	photoCounterByProcess.get(processInstanceId).getAndIncrement();
+			variables.put(PROCESS_VAR_PHOTO+ ( photoCounter % 10 ), photo);
+			photoCounter++;
+		}
+		
+		variables.put(PROCESS_VAR_PHOTO_COUNTER, photoCounter);
 		setProcessCommand.setVariables(variables);
 		
 		
@@ -146,8 +193,12 @@ public class RestResource {
 		
 		Map<String,String> entity = new HashMap<>();
 		entity.put("status", "photo-upload-success");
+		
+		
 		return Response.ok(entity).build();
 	}
+	
+	
 	
 	@POST
 	@Produces(MediaType.APPLICATION_JSON)
