@@ -276,7 +276,7 @@ public class RestResource {
 	@Produces(MediaType.APPLICATION_OCTET_STREAM)
 	public Response downloadPhoto(@PathParam("fileName") final String fileName,@Context HttpServletRequest request){
 		LOG.info("downloadPhoto : >> filename : {}", fileName);
-		String filepath = System.getProperty("jboss.home.dir")+"/bin/.docs/"+fileName;
+		final String filepath = System.getProperty("jboss.home.dir")+"/bin/.docs/"+fileName;
 		File dirDocs = new File(filepath);
 		final String [] filesInDir = dirDocs.list();
 		 
