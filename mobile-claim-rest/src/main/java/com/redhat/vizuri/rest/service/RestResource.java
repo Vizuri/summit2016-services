@@ -1,38 +1,37 @@
 package com.redhat.vizuri.rest.service;
 
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 import javax.annotation.PostConstruct;
 import javax.ejb.Singleton;
 import javax.ejb.Startup;
-import javax.ejb.Stateless;
 import javax.ejb.TransactionAttribute;
 import javax.ejb.TransactionAttributeType;
-import javax.ejb.TransactionManagement;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.PersistenceUnit;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
-import javax.ws.rs.MatrixParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.PathSegment;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.StreamingOutput;
 
 import org.apache.commons.io.IOUtils;
 import org.drools.core.command.runtime.process.SetProcessInstanceVariablesCommand;
@@ -59,7 +58,6 @@ import org.kie.api.runtime.manager.RuntimeManagerFactory;
 import org.kie.api.runtime.process.ProcessInstance;
 import org.kie.api.runtime.process.WorkflowProcessInstance;
 import org.kie.api.task.TaskService;
-import org.kie.internal.command.CommandFactory;
 import org.kie.internal.runtime.manager.context.ProcessInstanceIdContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -200,8 +198,15 @@ public class RestResource {
 		kieSession.execute(signalEventCommand);
 		kieSession.execute(setProcessCommand);
 		
+		StringBuffer url = request.getRequestURL();
+		String uri = request.getRequestURI();
+		String host = url.substring(0, url.indexOf(uri));
+		String warName = "summit-service/rest/vizuri/summit/download-photo";
+		
 		Map<String,String> entity = new HashMap<>();
 		entity.put("status", "photo-upload-success");
+		entity.put("photoLink", host+"/"+warName+"/"+	photo.getIdentifier());
+		
 		
 		
 		return Response.ok(entity).build();
@@ -255,6 +260,49 @@ public class RestResource {
 		LOG.info("addComments done");
 		
 		return Response.ok(entity).build();
+	}
+	
+	public void pipe(InputStream is, OutputStream os) throws IOException {
+	    int n;
+	    byte[] buffer = new byte[1024];
+	    while ((n = is.read(buffer)) > -1) {
+	        os.write(buffer, 0, n);   // Don't allow any extra bytes to creep in, final write
+	    }
+	    os.close();
+	}
+	
+	@GET
+	@Path("/download-photo/{fileName}")
+	@Produces(MediaType.APPLICATION_OCTET_STREAM)
+	public Response downloadPhoto(@PathParam("fileName") final String fileName,@Context HttpServletRequest request){
+		LOG.info("downloadPhoto : >> filename : {}", fileName);
+		String filepath = System.getProperty("jboss.home.dir")+"/bin/.docs/"+fileName;
+		File dirDocs = new File(filepath);
+		final String [] filesInDir = dirDocs.list();
+		 
+		 StreamingOutput stream = new StreamingOutput() {
+		        public void write(OutputStream output) throws IOException, WebApplicationException {
+		        		if(filesInDir == null || filesInDir.length == 0){
+		        			return;
+		        		}
+		        		
+		        		LOG.info("filesInDir found : "+filesInDir);
+		        		
+		        		try (FileInputStream fis = new FileInputStream(filepath+"/"+filesInDir[0]);) {
+		        			 pipe(fis, output);
+		        		} catch (FileNotFoundException e1) {
+		        			e1.printStackTrace();
+		        		} catch (IOException e2) {
+		        			
+		        			e2.printStackTrace();
+		        		}
+		              
+		          
+		        }
+		    };
+		    
+		return Response.ok(stream).header("content-disposition","attachment; filename = "+filesInDir[0]).build();
+		//return Response.ok(stream).build();
 	}
 	
 	@SuppressWarnings("rawtypes")
