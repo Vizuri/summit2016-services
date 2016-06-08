@@ -205,7 +205,7 @@ public class RestResource {
 		
 		Map<String,String> entity = new HashMap<>();
 		entity.put("status", "photo-upload-success");
-		entity.put("photoLink", host+"/"+warName+"/"+	photo.getIdentifier());
+		entity.put("photoLink", host+"/"+warName+"/"+	processInstanceId+"/"+photo.getIdentifier());
 		
 		
 		
@@ -272,10 +272,10 @@ public class RestResource {
 	}
 	
 	@GET
-	@Path("/download-photo/{fileName}")
+	@Path("/download-photo/{processInstanceId}/{fileName}")
 	@Produces(MediaType.APPLICATION_OCTET_STREAM)
-	public Response downloadPhoto(@PathParam("fileName") final String fileName,@Context HttpServletRequest request){
-		LOG.info("downloadPhoto : >> filename : {}", fileName);
+	public Response downloadPhoto(@PathParam("fileName") final String fileName,@PathParam("processInstanceId") Long processInstanceId,@Context HttpServletRequest request){
+		LOG.info("downloadPhoto : >> filename : {}, processInstanceId : {}", fileName,processInstanceId);
 		String filepath = System.getProperty("jboss.home.dir")+"/bin/.docs/"+fileName;
 		File dirDocs = new File(filepath);
 		final String [] filesInDir = dirDocs.list();
