@@ -169,7 +169,7 @@ public class RestResource {
 		
 		Document photo = docServ.buildDocument(fileName, content.length, new Date(), params);
 		photo.setContent(content);
-		photo = docServ.saveDocument(photo, content);
+		//photo = docServ.saveDocument(photo, content);
 		variables.put(photovarName, photo);
 		
 		/**
