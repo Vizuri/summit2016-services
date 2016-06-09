@@ -17,8 +17,16 @@ package com.redhat.vizuri.rest.service;
  */
 
 
+import java.util.HashSet;
+import java.util.Set;
+
 import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.core.Application;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import io.swagger.jaxrs.config.BeanConfig;
 
 /**
  * A class extending {@link Application} and annotated with @ApplicationPath is the Java EE 6
@@ -31,5 +39,32 @@ import javax.ws.rs.core.Application;
  */
 @ApplicationPath("/rest")
 public class JaxRsActivator extends Application {
-   /* class body intentionally left blank */
+
+	private static final Logger log = LoggerFactory.getLogger(JaxRsActivator.class);
+	
+	public JaxRsActivator() {
+        
+		log.info("Starting the rest interface for Massmutual");
+		BeanConfig beanConfig = new BeanConfig();
+        beanConfig.setVersion("0.9-SNAPSHOT");
+        beanConfig.setSchemes(new String[]{"http"});
+        beanConfig.setHost("localhost:8080");
+        beanConfig.setBasePath("/summit-service/rest");	//http://localhost:8080/mm-rest-app/rest/swagger.json
+        beanConfig.setResourcePackage("com.redhat.vizuri.rest");
+        beanConfig.setScan(true);
+	}
+	
+	public Set<Class<?>> getClasses() {
+        //return new HashSet<Class<?>>(Arrays.asList(RiskCalculatorService.class, BlenderService.class, MIBService.class, VerificationService.class, JacksonConfig.class, io.swagger.jaxrs.listing.ApiListingResource.class, io.swagger.jaxrs.listing.SwaggerSerializers.class));
+    
+        Set<Class<?>> resources = new HashSet<>();
+        
+        resources.add(RestResource.class);
+      
+        resources.add(io.swagger.jaxrs.listing.ApiListingResource.class);
+        resources.add(io.swagger.jaxrs.listing.SwaggerSerializers.class);
+        
+        return resources;
+	
+	}
 }
