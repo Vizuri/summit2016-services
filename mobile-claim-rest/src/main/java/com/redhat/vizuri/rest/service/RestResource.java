@@ -66,9 +66,15 @@ import com.redhat.vizuri.brms.service.RuleProcessor;
 import com.redhat.vizuri.insurance.Incident;
 import com.redhat.vizuri.insurance.Questionnaire;
 
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiResponses;
+import io.swagger.annotations.ApiResponse;
+
 @Path("/vizuri/summit")
 @Startup
 @Singleton
+@Api(value = "/risk")	//http://localhost:8080/summit-service/rest/swagger.json or http://localhost:8080/summit-service/rest/swagger.yaml
 public class RestResource {
 
 	//@Context
@@ -103,6 +109,11 @@ public class RestResource {
 	@Produces(MediaType.TEXT_PLAIN)
 	@Consumes(MediaType.APPLICATION_JSON)
 	@TransactionAttribute(TransactionAttributeType.REQUIRED)
+	@ApiOperation(value = "Get a list of PART I risk rating rollups given a PrimaryInsured", 
+	  notes = "Returns a list of Risk Rating Rollups",
+	  response = Long.class)
+	@ApiResponses(value = { @ApiResponse(code = 500, message = "Invalid input for insured"),
+							@ApiResponse(code = 500, message = "Exception in calculateRiskRatingRollupP1") })
 	public Long startProcess(){
 		
 		RuntimeEngine engine = manager.getRuntimeEngine(ProcessInstanceIdContext.get());
