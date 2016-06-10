@@ -68,18 +68,14 @@ import com.redhat.vizuri.insurance.Questionnaire;
 
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiResponses;
 import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
 
 @Path("/vizuri/summit")
+@Api("/vizuri/summit")
 @Startup
 @Singleton
-@Api(value = "/vizuri/summit")	//http://localhost:8080/summit-service/rest/swagger.json or http://localhost:8080/summit-service/rest/swagger.yaml
 public class RestResource {
-
-	//@Context
-	// private HttpServletRequest httpRequest;
-	 
 	@PersistenceUnit(unitName = "com.redhat.vizuri.jbpm.domain")
 	private EntityManagerFactory emf;
 	
@@ -102,8 +98,6 @@ public class RestResource {
 	/**
 	 * When a process is started, photoCounterByProcess will get a initial set of 0 counter
 	 */
-	//private static ConcurrentHashMap<Long, AtomicInteger> photoCounterByProcess = new ConcurrentHashMap<Long, AtomicInteger>();
-	
 	@POST
 	@Path("/startprocess")
 	@Produces(MediaType.TEXT_PLAIN)
@@ -233,6 +227,9 @@ public class RestResource {
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Path("/add-comments/{processInstanceId}")
 	@TransactionAttribute(TransactionAttributeType.REQUIRED)
+	@ApiOperation(value = "Adds a comment to an existing process instance", 
+	  notes = "Returns a 200 Ok if successful",
+	  response = Long.class)
 	public Response addComments(@PathParam("processInstanceId") Long processInstanceId,Map params){
 		LOG.info("addComments >> processInstanceId->{},parmas->{}",processInstanceId,params);
 		
@@ -288,6 +285,8 @@ public class RestResource {
 	@GET
 	@Path("/download-photo/{processInstanceId}/{fileName}")
 	@Produces(MediaType.APPLICATION_OCTET_STREAM)
+	@ApiOperation(value = "Get a particular photo", 
+	  response = Long.class)
 	public Response downloadPhoto(@PathParam("fileName") final String fileName,@PathParam("processInstanceId") Long processInstanceId,@Context HttpServletRequest request){
 		LOG.info("downloadPhoto : >> filename : {}, processInstanceId : {}", fileName,processInstanceId);
 		final String filepath = System.getProperty("jboss.home.dir")+"/bin/.docs/"+fileName;
@@ -316,10 +315,8 @@ public class RestResource {
 		    };
 		    
 		return Response.ok(stream).header("content-disposition","attachment; filename = "+filesInDir[0]).build();
-		//return Response.ok(stream).build();
 	}
 	
-	@SuppressWarnings("rawtypes")
 	@POST
 	@Path("/doadjuster/{processInstanceId}")
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -353,16 +350,12 @@ public class RestResource {
 		for (Long taskId : tasksList) {
 			LOG.info("task id {}", taskId);
 
-			//Map<String, Object> taskContent = new HashMap<String, Object>();
-			//taskContent.put("in_processRequest", "yes");
 			try {
 				Map<String,Object> content = taskService.getTaskContent(taskId);
 				if(! ADJUSTER_REVIEW_SIGNAL.equals(content.get("NodeName") ) ){
 					LOG.info("not a adjuster review skipping");
 				}
 				taskService.claim(taskId, caseworker);
-				//taskContent = taskService.getTaskContent(taskId);
-				//LOG.info("taskContent : {}",taskContent);
 				LOG.info("claim successful : " + taskId);
 			} catch (Exception e) {
 				LOG.error("error : " + e.getMessage());
@@ -383,7 +376,6 @@ public class RestResource {
 		LOG.info("done doAdjuster");
 		
 		return sendResponse(200, taskContent);
-	//	return taskContent;
 	}
 	
 	

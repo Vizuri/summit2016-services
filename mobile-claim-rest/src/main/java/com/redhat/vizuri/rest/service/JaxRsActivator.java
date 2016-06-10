@@ -44,7 +44,7 @@ public class JaxRsActivator extends Application {
 	
 	public JaxRsActivator() {
         
-		log.info("Starting the rest interface for Massmutual");
+		log.info("Starting the rest interface...");
 		BeanConfig beanConfig = new BeanConfig();
         beanConfig.setVersion("0.9-SNAPSHOT");
         beanConfig.setSchemes(new String[]{"http"});
@@ -52,6 +52,7 @@ public class JaxRsActivator extends Application {
         beanConfig.setBasePath("/summit-service/rest");	//http://localhost:8080/mm-rest-app/rest/swagger.json
         beanConfig.setResourcePackage("com.redhat.vizuri.rest");
         beanConfig.setScan(true);
+        beanConfig.setTitle("Backend services for the Vizuri-Red Hat 2016 Summit demo");
 	}
 	
 	public Set<Class<?>> getClasses() {
