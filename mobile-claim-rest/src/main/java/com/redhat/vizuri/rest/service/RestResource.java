@@ -74,7 +74,7 @@ import io.swagger.annotations.ApiResponse;
 @Path("/vizuri/summit")
 @Startup
 @Singleton
-@Api(value = "/risk")	//http://localhost:8080/summit-service/rest/swagger.json or http://localhost:8080/summit-service/rest/swagger.yaml
+@Api(value = "/vizuri/summit")	//http://localhost:8080/summit-service/rest/swagger.json or http://localhost:8080/summit-service/rest/swagger.yaml
 public class RestResource {
 
 	//@Context
@@ -109,11 +109,10 @@ public class RestResource {
 	@Produces(MediaType.TEXT_PLAIN)
 	@Consumes(MediaType.APPLICATION_JSON)
 	@TransactionAttribute(TransactionAttributeType.REQUIRED)
-	@ApiOperation(value = "Get a list of PART I risk rating rollups given a PrimaryInsured", 
-	  notes = "Returns a list of Risk Rating Rollups",
+	@ApiOperation(value = "Starts a new claim process", 
+	  notes = "Returns a process Id from the claim",
 	  response = Long.class)
-	@ApiResponses(value = { @ApiResponse(code = 500, message = "Invalid input for insured"),
-							@ApiResponse(code = 500, message = "Exception in calculateRiskRatingRollupP1") })
+	@ApiResponses(value = { @ApiResponse(code = 500, message = "Invalid if there was run time error") })
 	public Long startProcess(){
 		
 		RuntimeEngine engine = manager.getRuntimeEngine(ProcessInstanceIdContext.get());
@@ -132,6 +131,10 @@ public class RestResource {
 	@Produces(MediaType.APPLICATION_JSON)
 	@Consumes(MediaType.APPLICATION_OCTET_STREAM)
 	@TransactionAttribute(TransactionAttributeType.REQUIRED)
+	@ApiOperation(value = "Upload a new photo", 
+	  notes = "Returns a status json response",
+	  response = Map.class)
+	@ApiResponses(value = { @ApiResponse(code = 500, message = "Invalid if there was run time error") })
 	public Response uploadPhoto(@Context HttpServletRequest request, @PathParam("processInstanceId") Long processInstanceId,@PathParam("fileName") String fileName){
 		//fileName = null;
 		LOG.info("inside uploadPhoto >> processInstanceId :{}, fileName :{}");
