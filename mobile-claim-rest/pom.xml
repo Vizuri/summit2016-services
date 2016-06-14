@@ -1,5 +1,4 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
 		<groupId>com.redhat.vizuri.insurance</groupId>
@@ -8,16 +7,11 @@
 	</parent>
 	<artifactId>mobile-claim-rest</artifactId>
 	<packaging>war</packaging>
-
-
 	<properties>
-
-		<!-- Define the version of the JBoss BOMs we want to import. The JBoss 
-			BOMs specify tested stacks. -->
+		<!-- Define the version of the JBoss BOMs we want to import. The JBoss BOMs specify tested stacks. -->
 		<version.jboss.bom.eap>6.4.8.GA</version.jboss.bom.eap>
 		<bpms.version>6.4.0.Final</bpms.version>
 		<version.war.plugin>2.2</version.war.plugin>
-
 		<maven.compiler.target>1.8</maven.compiler.target>
 		<maven.compiler.source>1.8</maven.compiler.source>
 		<skipTests>true</skipTests>
@@ -25,7 +19,6 @@
 
 	<dependencyManagement>
 		<dependencies>
-
 			<dependency>
 				<groupId>org.drools</groupId>
 				<artifactId>drools-bom</artifactId>
@@ -33,7 +26,6 @@
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
-
 			<dependency>
 				<groupId>org.jbpm</groupId>
 				<artifactId>jbpm-bom</artifactId>
@@ -41,7 +33,6 @@
 				<scope>import</scope>
 				<type>pom</type>
 			</dependency>
-
 			<dependency>
 				<groupId>org.jboss.bom</groupId>
 				<artifactId>jboss-javaee-6.0-with-tools</artifactId>
@@ -49,7 +40,6 @@
 				<scope>import</scope>
 				<type>pom</type>
 			</dependency>
-
 			<dependency>
 				<groupId>org.jboss.spec</groupId>
 				<artifactId>jboss-javaee-6.0</artifactId>
@@ -60,46 +50,41 @@
 		</dependencies>
 	</dependencyManagement>
 	<dependencies>
-
-		<!-- Import the Common Annotations API (JSR-250), we use provided scope 
-			as the API is included in JBoss EAP 6 -->
+		<dependency>
+			<groupId>commons-fileupload</groupId>
+			<artifactId>commons-fileupload</artifactId>
+			<version>1.3.2</version>
+		</dependency>
+		<!-- Import the Common Annotations API (JSR-250), we use provided scope as the API is included in JBoss EAP 6 -->
 		<dependency>
 			<groupId>org.jboss.spec.javax.annotation</groupId>
 			<artifactId>jboss-annotations-api_1.1_spec</artifactId>
 			<scope>provided</scope>
 		</dependency>
-
-		<!-- Import the JAX-RS API, we use provided scope as the API is included 
-			in JBoss EAP 6 -->
+		<!-- Import the JAX-RS API, we use provided scope as the API is included in JBoss EAP 6 -->
 		<dependency>
 			<groupId>org.jboss.spec.javax.ws.rs</groupId>
 			<artifactId>jboss-jaxrs-api_1.1_spec</artifactId>
 			<scope>provided</scope>
 		</dependency>
-
-		<!-- Import the JPA API, we use provided scope as the API is included in 
-			JBoss EAP 6 -->
+		<!-- Import the JPA API, we use provided scope as the API is included in JBoss EAP 6 -->
 		<dependency>
 			<groupId>org.hibernate.javax.persistence</groupId>
 			<artifactId>hibernate-jpa-2.1-api</artifactId>
 			<version>1.0.0.Final</version>
 			<scope>provided</scope>
 		</dependency>
-
-		<!-- Import the EJB API, we use provided scope as the API is included in 
-			JBoss EAP 6 -->
+		<!-- Import the EJB API, we use provided scope as the API is included in JBoss EAP 6 -->
 		<dependency>
 			<groupId>org.jboss.spec.javax.ejb</groupId>
 			<artifactId>jboss-ejb-api_3.1_spec</artifactId>
 			<scope>provided</scope>
 		</dependency>
-
 		<dependency>
 			<groupId>org.jboss.spec.javax.servlet</groupId>
 			<artifactId>jboss-servlet-api_3.0_spec</artifactId>
 			<scope>provided</scope>
 		</dependency>
-
 		<dependency>
 			<groupId>postgresql</groupId>
 			<artifactId>postgresql</artifactId>
@@ -107,8 +92,6 @@
 			<scope>provided</scope>
 		</dependency>
 		<!-- Internal dependencies -->
-
-
 		<dependency>
 			<groupId>org.hibernate</groupId>
 			<artifactId>hibernate-entitymanager</artifactId>
@@ -116,24 +99,20 @@
 			<version>5.1.0.Final  </version>
 			<scope>provided</scope>
 		</dependency>
-
 		<dependency>
 			<groupId>com.redhat.vizuri.insurance</groupId>
 			<artifactId>mobile-claims-bpm</artifactId>
 			<version>1.0-SNAPSHOT</version>
 		</dependency>
-
 		<dependency>
 			<groupId>com.redhat.vizuri.insurance</groupId>
 			<artifactId>mobile-claim-domain</artifactId>
 			<version>0.0.1-SNAPSHOT</version>
 		</dependency>
-
 		<dependency>
 			<groupId>org.kie</groupId>
 			<artifactId>kie-ci</artifactId>
 		</dependency>
-
 		<!-- JBPM Dependencies -->
 		<dependency>
 			<groupId>org.kie</groupId>
@@ -145,7 +124,6 @@
 			<artifactId>kie-internal</artifactId>
 			<scope>compile</scope>
 		</dependency>
-
 		<dependency>
 			<groupId>org.drools</groupId>
 			<artifactId>drools-core</artifactId>
@@ -156,14 +134,12 @@
 			<artifactId>drools-compiler</artifactId>
 			<scope>compile</scope>
 		</dependency>
-
 		<!-- jBPMN -->
 		<dependency>
 			<groupId>com.google.inject.extensions</groupId>
 			<artifactId>guice-servlet</artifactId>
 			<version>3.0</version>
 		</dependency>
-
 		<dependency>
 			<groupId>org.jbpm</groupId>
 			<artifactId>jbpm-bpmn2</artifactId>
@@ -184,12 +160,10 @@
 			<artifactId>jbpm-audit</artifactId>
 			<scope>compile</scope>
 		</dependency>
-
 		<dependency>
 			<groupId>org.jbpm</groupId>
 			<artifactId>jbpm-persistence-jpa</artifactId>
 		</dependency>
-
 		<dependency>
 			<groupId>org.jbpm</groupId>
 			<artifactId>jbpm-workitems</artifactId>
@@ -221,7 +195,6 @@
 			<groupId>org.jbpm</groupId>
 			<artifactId>jbpm-document</artifactId>
 		</dependency>
-
 		<!-- test -->
 		<dependency>
 			<groupId>org.codehaus.btm</groupId>
@@ -251,26 +224,22 @@
 			<artifactId>jbpm-test</artifactId>
 			<scope>test</scope>
 		</dependency>
-
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-simple</artifactId>
 			<version>1.7.5</version>
 			<scope>test</scope>
 		</dependency>
-		
 		<dependency>
-		  <groupId>io.swagger</groupId>
-		  <artifactId>swagger-jaxrs</artifactId>
-		  <version>1.5.7</version>
-		  <scope>compile</scope>
+			<groupId>io.swagger</groupId>
+			<artifactId>swagger-jaxrs</artifactId>
+			<version>1.5.7</version>
+			<scope>compile</scope>
 		</dependency>
 	</dependencies>
 
 	<build>
-
 		<finalName>summit-service</finalName>
-
 		<pluginManagement>
 			<plugins>
 				<plugin>
@@ -294,7 +263,6 @@
 						</archive>
 					</configuration>
 				</plugin>
-
 				<plugin>
 					<artifactId>maven-war-plugin</artifactId>
 					<version>${version.war.plugin}</version>
@@ -319,8 +287,7 @@
 					<artifactId>jboss-as-maven-plugin</artifactId>
 					<version>${version.jboss.maven.plugin}</version>
 				</plugin>
-				<!--This plugin's configuration is used to store Eclipse m2e settings 
-					only. It has no influence on the Maven build itself. -->
+				<!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself. -->
 				<plugin>
 					<groupId>org.eclipse.m2e</groupId>
 					<artifactId>lifecycle-mapping</artifactId>
@@ -383,7 +350,6 @@
 				<artifactId>exec-maven-plugin</artifactId>
 				<version>1.5.0</version>
 			</plugin>
-
 		</plugins>
 	</build>
 </project>

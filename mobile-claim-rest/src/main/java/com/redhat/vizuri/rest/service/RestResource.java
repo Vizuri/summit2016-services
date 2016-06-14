@@ -1,5 +1,9 @@
 package com.redhat.vizuri.rest.service;
 
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -10,6 +14,7 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -20,6 +25,7 @@ import javax.ejb.TransactionAttribute;
 import javax.ejb.TransactionAttributeType;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.PersistenceUnit;
+import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -33,6 +39,10 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 
+import org.apache.commons.fileupload.FileItem;
+import org.apache.commons.fileupload.FileUploadException;
+import org.apache.commons.fileupload.disk.DiskFileItemFactory;
+import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.apache.commons.io.IOUtils;
 import org.drools.core.command.runtime.process.SetProcessInstanceVariablesCommand;
 import org.drools.core.command.runtime.process.SignalEventCommand;
@@ -66,272 +76,102 @@ import com.redhat.vizuri.brms.service.RuleProcessor;
 import com.redhat.vizuri.insurance.Incident;
 import com.redhat.vizuri.insurance.Questionnaire;
 
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiResponse;
-import io.swagger.annotations.ApiResponses;
-
 @Path("/vizuri/summit")
 @Api("/vizuri/summit")
 @Startup
 @Singleton
 public class RestResource {
-	@PersistenceUnit(unitName = "com.redhat.vizuri.jbpm.domain")
-	private EntityManagerFactory emf;
-	
-	private static final Logger LOG = LoggerFactory.getLogger(RestResource.class);
 
 	private static final String ADD_COMMENTS_SIGNAL = "add-comments";
-
-	private static final String UPLOAD_PHOTO_SIGNAL = "upload-photo";
-
+	private static String ADJUSTER_REVIEW_SIGNAL = "Adjuster Review";
+	private static final Logger LOG = LoggerFactory.getLogger(RestResource.class);
+	private static RuntimeManager manager;
 	private static final String PROCESS_VAR_CLAIM_COMMENTS = "claimComments";
-
 	private static final String PROCESS_VAR_PHOTO = "photo";
-
 	private static final String PROCESS_VAR_PHOTO_COUNTER = "photoCounter";
-
-	
-	private static String  ADJUSTER_REVIEW_SIGNAL ="Adjuster Review";
+	private static final String UPLOAD_PHOTO_SIGNAL = "upload-photo";
+	@PersistenceUnit(unitName = "com.redhat.vizuri.jbpm.domain")
+	private EntityManagerFactory emf;
 	private RuleProcessor ruleProcessor = null;
-	
-	/**
-	 * When a process is started, photoCounterByProcess will get a initial set of 0 counter
-	 */
-	@POST
-	@Path("/startprocess")
-	@Produces(MediaType.TEXT_PLAIN)
-	@Consumes(MediaType.APPLICATION_JSON)
-	@TransactionAttribute(TransactionAttributeType.REQUIRED)
-	@ApiOperation(value = "Starts a new claim process", 
-	  notes = "Returns a process Id from the claim",
-	  response = Long.class)
-	@ApiResponses(value = { @ApiResponse(code = 500, message = "Invalid if there was run time error") })
-	public Long startProcess(){
-		
-		RuntimeEngine engine = manager.getRuntimeEngine(ProcessInstanceIdContext.get());
 
-		KieSession kieSession = engine.getKieSession();
-		Map<String, Object> params = new HashMap<String,Object>();
-		params.put(PROCESS_VAR_PHOTO_COUNTER, -1);
-		ProcessInstance instance = kieSession.startProcess("mobile-claims-bpm.mobile-claim-process", params);
-		LOG.info("instance id : " + instance.getId());
-		//photoCounterByProcess.put(instance.getId(), new AtomicInteger(0));
-		return instance.getId();
+	private void buildRunTime() {
+		if (manager != null) {
+			return;
+		}
+		System.setProperty("app.url", "org.kie.workbench.KIEWebapp/");
+		DefaultRegisterableItemsFactory df = new DefaultRegisterableItemsFactory();
+		df.addWorkItemHandler("Receive Task", ReceiveTaskHandler.class);
+		df.addWorkItemHandler("Manual Task", SystemOutWorkItemHandler.class);
+
+		KieServices kieServices = KieServices.Factory.get();
+		KieContainer kieContainer = kieServices.getKieClasspathContainer();
+		LOG.info("logger : {}", kieContainer);
+		RuntimeEnvironmentBuilder builder = RuntimeEnvironmentBuilder.Factory.get().newDefaultBuilder();
+		builder.knowledgeBase(kieContainer.getKieBase("mobile-claim-kbase")).userGroupCallback(new JBossUserGroupCallbackImpl("classpath:/roles.properties")).entityManagerFactory(emf).registerableItemsFactory(df)
+				.addEnvironmentEntry(EnvironmentName.OBJECT_MARSHALLING_STRATEGIES, new ObjectMarshallingStrategy[] { new JPAPlaceholderResolverStrategy(emf), new DocumentMarshallingStrategy(), new SerializablePlaceholderResolverStrategy(ClassObjectMarshallingStrategyAcceptor.DEFAULT) });
+		LOG.info("kieContainer.getReleaseId() {}", kieContainer.getReleaseId());
+		String releaseId = "com.redhat.vizuri.insurance:mobile-claims-bpm:1.0-SNAPSHOT";
+		LOG.info("builder : {}", builder);
+		manager = RuntimeManagerFactory.Factory.get().newPerProcessInstanceRuntimeManager(builder.get(), releaseId);
 	}
-	
-	@POST
-	@Path("/upload-photo/{processInstanceId}/{fileName}")
-	@Produces(MediaType.APPLICATION_JSON)
-	@Consumes(MediaType.APPLICATION_OCTET_STREAM)
-	@TransactionAttribute(TransactionAttributeType.REQUIRED)
-	@ApiOperation(value = "Upload a new photo", 
-	  notes = "Returns a status json response",
-	  response = Map.class)
-	@ApiResponses(value = { @ApiResponse(code = 500, message = "Invalid if there was run time error") })
-	public Response uploadPhoto(@Context HttpServletRequest request, @PathParam("processInstanceId") Long processInstanceId,@PathParam("fileName") String fileName){
-		//fileName = null;
-		LOG.info("inside uploadPhoto >> processInstanceId :{}, fileName :{}");
-		RuntimeEngine engine = manager.getRuntimeEngine(ProcessInstanceIdContext.get(processInstanceId));
-		KieSession kieSession = engine.getKieSession();
-		ProcessInstance processInstance = kieSession.getProcessInstance(processInstanceId);
-		
-		WorkflowProcessInstance workflowProcessInstance = (WorkflowProcessInstance) processInstance;
-		Integer photoCounter  = (Integer) workflowProcessInstance.getVariable(PROCESS_VAR_PHOTO_COUNTER);
-		String photovarName = PROCESS_VAR_PHOTO;
-		if(photoCounter == null || photoCounter < 0 ){
-			photoCounter = 0;
-		}else{
-			photoCounter++;
-			photovarName = PROCESS_VAR_PHOTO+photoCounter;
-			
-			if(photoCounter > 9){
-				photovarName = PROCESS_VAR_PHOTO+ ( photoCounter % 10 );
-				
-				if ( ( photoCounter % 10 ) == 0 ){
-					photovarName = PROCESS_VAR_PHOTO;
-				}
-			}
-		}
-		
-		SetProcessInstanceVariablesCommand setProcessCommand = new SetProcessInstanceVariablesCommand();
-		setProcessCommand.setProcessInstanceId(processInstanceId);
-		Map<String,Object> variables = new HashMap<>();
-		
-		byte[] content =  {};//"yet another document content".getBytes();
-		try {
-			content = IOUtils.toByteArray(request.getInputStream());
-		} catch (IOException e) {
-			content = "Error Occured getting bytes".getBytes();
-			LOG.error("",e);
-		}
-		//byte[] content = "yet another document content".getBytes();
-		DocumentStorageServiceImpl docServ = new DocumentStorageServiceImpl();	
-		Map<String,String> params = new HashMap<>();
-		params.put("app.url", "org.kie.workbench.KIEWebapp/");
-		if(fileName == null){
-			fileName = "insurance-image"+photoCounter+"-"+System.nanoTime();
-		}
-		
-		Document photo = docServ.buildDocument(fileName, content.length, new Date(), params);
-		photo.setContent(content);
-		//photo = docServ.saveDocument(photo, content);
-		variables.put(photovarName, photo);
-		
-		/**
-		 * photoCounterByProcess.get(processInstanceId) initially return a -1 counter
-		 * we are incrementing first and using a process varname+counter as process variable
-		 * 
-		 * if count is greater that we will user the  remainder value
-		 */
-//		 if(photoCounter <= 9 ){
-//			//1-9 is photo1...photo9
-//		//	photoCounterByProcess.get(processInstanceId).getAndIncrement();
-//			variables.put(photovarName, photo);
-//		}else{
-//			//anything above 9 will be the remainder of the counter
-//		//	photoCounterByProcess.get(processInstanceId).getAndIncrement();
-//			variables.put(PROCESS_VAR_PHOTO+ ( photoCounter % 10 ), photo);
-//			
-//		}
-		
-		variables.put(PROCESS_VAR_PHOTO_COUNTER, photoCounter);
-		setProcessCommand.setVariables(variables);
-		
-		
-		SignalEventCommand signalEventCommand = new SignalEventCommand();
-		signalEventCommand.setProcessInstanceId(processInstanceId);
-		signalEventCommand.setEventType(UPLOAD_PHOTO_SIGNAL);
-		
-		kieSession.execute(signalEventCommand);
-		kieSession.execute(setProcessCommand);
-		
-		StringBuffer url = request.getRequestURL();
-		String uri = request.getRequestURI();
-		String host = url.substring(0, url.indexOf(uri));
-		String warName = "summit-service/rest/vizuri/summit/download-photo";
-		
-		Map<String,String> entity = new HashMap<>();
-		entity.put("status", "photo-upload-success");
-		entity.put("photoLink", host+"/"+warName+"/"+	processInstanceId+"/"+photo.getIdentifier());
-		
-		
-		
-		return Response.ok(entity).build();
+
+	private Response sendResponse(int status, Object result) {
+		return Response.status(status).header("Access-Control-Allow-Origin", "*").header("Access-Control-Allow-Headers", "origin, content-type, accept, authorization").header("Access-Control-Allow-Credentials", "true").header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD")
+				.header("Access-Control-Max-Age", "1209601").entity(result).build();
 	}
-	
-	
-	
+
+	@SuppressWarnings({ "rawtypes", "unchecked" })
 	@POST
 	@Produces(MediaType.APPLICATION_JSON)
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Path("/add-comments/{processInstanceId}")
 	@TransactionAttribute(TransactionAttributeType.REQUIRED)
-	@ApiOperation(value = "Adds a comment to an existing process instance", 
-	  notes = "Returns a 200 Ok if successful",
-	  response = Long.class)
-	public Response addComments(@PathParam("processInstanceId") Long processInstanceId,Map params){
-		LOG.info("addComments >> processInstanceId->{},parmas->{}",processInstanceId,params);
-		
+	@ApiOperation(value = "Adds a comment to an existing process instance", notes = "Returns a 200 Ok if successful", response = Long.class)
+	public Response addComments(@PathParam("processInstanceId") Long processInstanceId, Map params) {
+		LOG.info("addComments >> processInstanceId->{},parmas->{}", processInstanceId, params);
 		RuntimeEngine engine = manager.getRuntimeEngine(ProcessInstanceIdContext.get(processInstanceId));
 		KieSession kieSession = engine.getKieSession();
-	
 		ProcessInstance processInstance = kieSession.getProcessInstance(processInstanceId);
-		
-		//List<VariableInstanceLog> logs = (List<VariableInstanceLog>) engine.getAuditService().findVariableInstances(processInstanceId, "claimComments");
+
 		WorkflowProcessInstance workflowProcessInstance = (WorkflowProcessInstance) processInstance;
-		
 		ArrayList claimComments = (ArrayList) workflowProcessInstance.getVariable(PROCESS_VAR_CLAIM_COMMENTS);
-		if(claimComments == null){
+		if (claimComments == null) {
 			claimComments = new ArrayList();
 		}
-		LOG.info("claimComments {}",claimComments.getClass());
-		//workflowProcessInstance.setVariable(PROCESS_VAR_CLAIM_COMMENTS, claimComments);
-				
+		LOG.info("claimComments {}", claimComments.getClass());
+
 		SetProcessInstanceVariablesCommand setProcessCommand = new SetProcessInstanceVariablesCommand();
 		setProcessCommand.setProcessInstanceId(processInstanceId);
-		Map<String,Object> variables = new HashMap();
-		
+		Map<String, Object> variables = new HashMap();
+
 		claimComments.add(params.get(PROCESS_VAR_CLAIM_COMMENTS));
 		variables.put(PROCESS_VAR_CLAIM_COMMENTS, claimComments);
-		
+
 		setProcessCommand.setVariables(variables);
-		
-		
+
 		SignalEventCommand signalEventCommand = new SignalEventCommand();
 		signalEventCommand.setProcessInstanceId(processInstanceId);
 		signalEventCommand.setEventType(ADD_COMMENTS_SIGNAL);
-		
+
 		kieSession.execute(signalEventCommand);
 		kieSession.execute(setProcessCommand);
-		
-		Map<String,String> entity = new HashMap();
+
+		Map<String, String> entity = new HashMap();
 		entity.put("status", "add-comment-success");
-		
+
 		LOG.info("addComments done");
-		
+
 		return Response.ok(entity).build();
 	}
-	
-	public void pipe(InputStream is, OutputStream os) throws IOException {
-	    int n;
-	    byte[] buffer = new byte[1024];
-	    while ((n = is.read(buffer)) > -1) {
-	        os.write(buffer, 0, n);   // Don't allow any extra bytes to creep in, final write
-	    }
-	    os.close();
-	}
-	
-	@GET
-	@Path("/download-photo/{processInstanceId}/{fileName}")
-	@Produces(MediaType.APPLICATION_OCTET_STREAM)
-	@ApiOperation(value = "Get a particular photo", 
-	  response = Long.class)
-	public Response downloadPhoto(@PathParam("fileName") final String fileName,@PathParam("processInstanceId") Long processInstanceId,@Context HttpServletRequest request){
-		LOG.info("downloadPhoto : >> filename : {}, processInstanceId : {}", fileName,processInstanceId);
-		final String filepath = System.getProperty("jboss.home.dir")+"/bin/.docs/"+fileName;
-		File dirDocs = new File(filepath);
-		final String [] filesInDir = dirDocs.list();
-		 
-		 StreamingOutput stream = new StreamingOutput() {
-		        public void write(OutputStream output) throws IOException, WebApplicationException {
-		        		if(filesInDir == null || filesInDir.length == 0){
-		        			return;
-		        		}
-		        		
-		        		LOG.info("filesInDir found : "+filesInDir);
-		        		
-		        		try (FileInputStream fis = new FileInputStream(filepath+"/"+filesInDir[0]);) {
-		        			 pipe(fis, output);
-		        		} catch (FileNotFoundException e1) {
-		        			e1.printStackTrace();
-		        		} catch (IOException e2) {
-		        			
-		        			e2.printStackTrace();
-		        		}
-		              
-		          
-		        }
-		    };
-		    
-		return Response.ok(stream).header("content-disposition","attachment; filename = "+filesInDir[0]).build();
-	}
-	
+
 	@POST
 	@Path("/doadjuster/{processInstanceId}")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
 	@TransactionAttribute(TransactionAttributeType.REQUIRED)
-	public Response doAdjuster(Map<String,Object> taskContent, @PathParam("processInstanceId") Long processInstanceId){
-		
-		LOG.info("inside doAdjuster : taskContent >> {}, processInstanceId >> {}",taskContent,processInstanceId);
+	public Response doAdjuster(Map<String, Object> taskContent, @PathParam("processInstanceId") Long processInstanceId) {
+		LOG.info("inside doAdjuster : taskContent >> {}, processInstanceId >> {}", taskContent, processInstanceId);
 		RuntimeEngine engine = manager.getRuntimeEngine(ProcessInstanceIdContext.get(processInstanceId));
-		/**
-		 * task_complete
-		 * task_adjustedAmount
-		 * task_approved
-		 * task_comment
-		 */
 		KieSession kieSession = engine.getKieSession();
 		SignalEventCommand command = new SignalEventCommand();
 		command.setProcessInstanceId(processInstanceId);
@@ -341,18 +181,17 @@ public class RestResource {
 
 		Object commandReturn = kieSession.execute(command);
 		LOG.info("commandReturn {}", commandReturn);
-		
+
 		TaskService taskService = engine.getTaskService();
 		String caseworker = "caseworker";
 		List<Long> tasksList = taskService.getTasksByProcessInstanceId(processInstanceId);
-		
-		
+
 		for (Long taskId : tasksList) {
 			LOG.info("task id {}", taskId);
 
 			try {
-				Map<String,Object> content = taskService.getTaskContent(taskId);
-				if(! ADJUSTER_REVIEW_SIGNAL.equals(content.get("NodeName") ) ){
+				Map<String, Object> content = taskService.getTaskContent(taskId);
+				if (!ADJUSTER_REVIEW_SIGNAL.equals(content.get("NodeName"))) {
 					LOG.info("not a adjuster review skipping");
 				}
 				taskService.claim(taskId, caseworker);
@@ -361,25 +200,58 @@ public class RestResource {
 				LOG.error("error : " + e.getMessage());
 				continue;
 			}
-			
-			LOG.info("now starting taskId {}",taskId);
+
+			LOG.info("now starting taskId {}", taskId);
 			taskService.start(taskId, caseworker);
-			LOG.info("taskId {} started",taskId);
-			
+			LOG.info("taskId {} started", taskId);
+
 			taskService.complete(taskId, caseworker, taskContent);
-			LOG.info("complete taskId >> {}",taskId);
+			LOG.info("complete taskId >> {}", taskId);
 			taskContent = taskService.getTaskContent(taskId);
 
-			
 		}
-		
 		LOG.info("done doAdjuster");
-		
 		return sendResponse(200, taskContent);
 	}
-	
-	
-	
+
+	@GET
+	@Path("/download-photo/{processInstanceId}/{fileName}")
+	@Produces(MediaType.APPLICATION_OCTET_STREAM)
+	@ApiOperation(value = "Get a particular photo", response = Long.class)
+	public Response downloadPhoto(@PathParam("fileName") final String fileName, @PathParam("processInstanceId") Long processInstanceId, @Context HttpServletRequest request) {
+		LOG.info("downloadPhoto : >> filename : {}, processInstanceId : {}", fileName, processInstanceId);
+		final String filepath = System.getProperty("jboss.home.dir") + "/bin/.docs/" + fileName;
+		File dirDocs = new File(filepath);
+		final String[] filesInDir = dirDocs.list();
+
+		StreamingOutput stream = new StreamingOutput() {
+			public void write(OutputStream output) throws IOException, WebApplicationException {
+				if (filesInDir == null || filesInDir.length == 0) {
+					return;
+				}
+
+				LOG.info("filesInDir found : " + filesInDir);
+
+				try (FileInputStream fis = new FileInputStream(filepath + "/" + filesInDir[0]);) {
+					pipe(fis, output);
+				} catch (FileNotFoundException e1) {
+					e1.printStackTrace();
+				} catch (IOException e2) {
+
+					e2.printStackTrace();
+				}
+
+			}
+		};
+		return Response.ok(stream).header("content-disposition", "attachment; filename = " + filesInDir[0]).build();
+	}
+
+	@PostConstruct
+	public void init() {
+		buildRunTime();
+		ruleProcessor = new RuleProcessor();
+	}
+
 	@POST
 	@Path("/customer-incident")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -394,7 +266,42 @@ public class RestResource {
 			return Response.serverError().entity(new ErrorResponse("Exception in initCustomerQuestionnaire, error: " + ex.getMessage() + "\n" + ex.getStackTrace())).build();
 		}
 	}
-	
+
+	public void pipe(InputStream is, OutputStream os) throws IOException {
+		int n;
+		byte[] buffer = new byte[1024];
+		while ((n = is.read(buffer)) > -1) {
+			os.write(buffer, 0, n); // Don't allow any extra bytes to creep in, final write
+		}
+		os.close();
+	}
+
+	/**
+	 * When a process is started, photoCounterByProcess will get a initial set of 0 counter
+	 */
+	@POST
+	@Path("/startprocess")
+	@Produces(MediaType.TEXT_PLAIN)
+	@Consumes(MediaType.APPLICATION_JSON)
+	@TransactionAttribute(TransactionAttributeType.REQUIRED)
+	@ApiOperation(value = "Starts a new claim process", notes = "Returns a process Id from the claim", response = Long.class)
+	@ApiResponses(value = { @ApiResponse(code = 500, message = "Invalid if there was run time error") })
+	public Long startProcess() {
+		RuntimeEngine engine = manager.getRuntimeEngine(ProcessInstanceIdContext.get());
+		KieSession kieSession = engine.getKieSession();
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put(PROCESS_VAR_PHOTO_COUNTER, -1);
+		ProcessInstance instance = kieSession.startProcess("mobile-claims-bpm.mobile-claim-process", params);
+		LOG.info("instance id : " + instance.getId());
+		return instance.getId();
+	}
+
+	@GET
+	@Produces(MediaType.TEXT_PLAIN)
+	public Response testDummy() {
+		return Response.ok("success", MediaType.TEXT_PLAIN).build();
+	}
+
 	@POST
 	@Path("/update-questions")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -403,69 +310,103 @@ public class RestResource {
 		try {
 			ruleProcessor.updateQuestionnaire(questionnaire);
 			LOG.info("Updated questionnaire: " + questionnaire);
-			return sendResponse(200,  questionnaire);
+			return sendResponse(200, questionnaire);
 		} catch (Exception ex) {
 			LOG.error("Exception in updateQuestions", ex);
 			return Response.serverError().entity(new ErrorResponse("Exception in updateQuestions, error: " + ex.getMessage() + "\n" + ex.getStackTrace())).build();
 		}
 	}
-	
-	
-	@GET
-	@Produces(MediaType.TEXT_PLAIN)
-	public Response testDummy() {
-		return Response.ok("success", MediaType.TEXT_PLAIN).build();
-	}
-	
-	private Response sendResponse(int status, Object result){
-		
-		return Response.status(status).header("Access-Control-Allow-Origin", "*")
-				.header("Access-Control-Allow-Headers", "origin, content-type, accept, authorization")
-				.header("Access-Control-Allow-Credentials", "true")
-				.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD")
-				.header("Access-Control-Max-Age", "1209601").entity(result).build();
-	}
-	
-	
-	private static RuntimeManager manager;
-	
-	@PostConstruct
-	public void init(){
-		buildRunTime();
-		ruleProcessor = new RuleProcessor();
-	}
-	private void buildRunTime(){
-			if(manager != null){
-				return;
+
+	@POST
+	@Path("/upload-photo/{processInstanceId}/{fileName}")
+	@Produces(MediaType.APPLICATION_JSON)
+	@Consumes(MediaType.MULTIPART_FORM_DATA)
+	@TransactionAttribute(TransactionAttributeType.REQUIRED)
+	@ApiOperation(value = "Upload a new photo", notes = "Returns a status json response", response = Map.class)
+	@ApiResponses(value = { @ApiResponse(code = 500, message = "Invalid if there was run time error") })
+	public Response uploadPhoto(@Context HttpServletRequest request, @PathParam("processInstanceId") Long processInstanceId, @PathParam("fileName") String fileName) {
+		LOG.info("inside uploadPhoto >> processInstanceId :{}, fileName :{}, jsonMap : {}", processInstanceId, fileName);
+		RuntimeEngine engine = manager.getRuntimeEngine(ProcessInstanceIdContext.get(processInstanceId));
+		KieSession kieSession = engine.getKieSession();
+		ProcessInstance processInstance = kieSession.getProcessInstance(processInstanceId);
+
+		WorkflowProcessInstance workflowProcessInstance = (WorkflowProcessInstance) processInstance;
+		Integer photoCounter = (Integer) workflowProcessInstance.getVariable(PROCESS_VAR_PHOTO_COUNTER);
+		String photovarName = PROCESS_VAR_PHOTO;
+		if (photoCounter == null || photoCounter < 0) {
+			photoCounter = 0;
+		} else {
+			photoCounter++;
+			photovarName = PROCESS_VAR_PHOTO + photoCounter;
+			if (photoCounter > 9) {
+				photovarName = PROCESS_VAR_PHOTO + (photoCounter % 10);
+				if ((photoCounter % 10) == 0) {
+					photovarName = PROCESS_VAR_PHOTO;
+				}
 			}
-			
-			System.setProperty("app.url", "org.kie.workbench.KIEWebapp/");
-			DefaultRegisterableItemsFactory df = new DefaultRegisterableItemsFactory();
-			//WorkItemHandler restWorkItemHandler = new RESTWorkItemHandler(this.getClass().getClassLoader() ) ;
-			df.addWorkItemHandler("Receive Task", ReceiveTaskHandler.class);
-			df.addWorkItemHandler("Manual Task", SystemOutWorkItemHandler.class);
-			
-			KieServices kieServices = KieServices.Factory.get();
-			KieContainer kieContainer = kieServices.getKieClasspathContainer();
-			LOG.info("logger : {}",kieContainer);
-			RuntimeEnvironmentBuilder builder = RuntimeEnvironmentBuilder.Factory.get().newDefaultBuilder();
-			builder.knowledgeBase(kieContainer.getKieBase("mobile-claim-kbase"))
-			.userGroupCallback(new JBossUserGroupCallbackImpl("classpath:/roles.properties"))
-			.entityManagerFactory(emf)
-			.registerableItemsFactory(df)
-			.addEnvironmentEntry(EnvironmentName.OBJECT_MARSHALLING_STRATEGIES, new ObjectMarshallingStrategy[]{
-					new JPAPlaceholderResolverStrategy(emf),
-					new DocumentMarshallingStrategy(),
-					new SerializablePlaceholderResolverStrategy( 
-	                          ClassObjectMarshallingStrategyAcceptor.DEFAULT  )
-			});
-			;
-			
-			
-			;
-			LOG.info("kieContainer.getReleaseId() {}",kieContainer.getReleaseId());
-			String releaseId = "com.redhat.vizuri.insurance:mobile-claims-bpm:1.0-SNAPSHOT";
-			LOG.info("builder : {}",builder);
-			manager =RuntimeManagerFactory.Factory.get().newPerProcessInstanceRuntimeManager(builder.get(),releaseId);
+		}
+
+		SetProcessInstanceVariablesCommand setProcessCommand = new SetProcessInstanceVariablesCommand();
+		setProcessCommand.setProcessInstanceId(processInstanceId);
+		Map<String, Object> variables = new HashMap<>();
+
+		byte[] content = {};
+		boolean isMultipart = ServletFileUpload.isMultipartContent(request);
+		LOG.info("isMultipart: " + isMultipart);
+		if (isMultipart) {
+			DiskFileItemFactory factory = new DiskFileItemFactory();
+			ServletContext servletContext = request.getServletContext();
+			File repository = (File) servletContext.getAttribute("javax.servlet.context.tempdir");
+			factory.setRepository(repository);
+			ServletFileUpload upload = new ServletFileUpload(factory);
+			try {
+				List<FileItem> items = upload.parseRequest(request);
+				LOG.info("Items: " + items);
+				Iterator<FileItem> iter = items.iterator();
+				while (iter.hasNext()) {
+					FileItem item = iter.next();
+					if (!item.isFormField()) {
+						try {
+							content = IOUtils.toByteArray(item.getInputStream());
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+					}
+				}
+			} catch (FileUploadException e) {
+				e.printStackTrace();
+			}
+		}
+
+		DocumentStorageServiceImpl docServ = new DocumentStorageServiceImpl();
+		Map<String, String> params = new HashMap<>();
+		params.put("app.url", "org.kie.workbench.KIEWebapp/");
+		if (fileName == null) {
+			fileName = "insurance-image" + photoCounter + "-" + System.nanoTime();
+		}
+
+		Document photo = docServ.buildDocument(fileName, content.length, new Date(), params);
+		photo.setContent(content);
+		variables.put(photovarName, photo);
+		variables.put(PROCESS_VAR_PHOTO_COUNTER, photoCounter);
+		setProcessCommand.setVariables(variables);
+
+		SignalEventCommand signalEventCommand = new SignalEventCommand();
+		signalEventCommand.setProcessInstanceId(processInstanceId);
+		signalEventCommand.setEventType(UPLOAD_PHOTO_SIGNAL);
+
+		kieSession.execute(signalEventCommand);
+		kieSession.execute(setProcessCommand);
+
+		StringBuffer url = request.getRequestURL();
+		String uri = request.getRequestURI();
+		String host = url.substring(0, url.indexOf(uri));
+		String warName = "summit-service/rest/vizuri/summit/download-photo";
+
+		Map<String, String> entity = new HashMap<>();
+		entity.put("status", "photo-upload-success");
+		entity.put("photoLink", host + "/" + warName + "/" + processInstanceId + "/" + photo.getIdentifier());
+
+		return Response.ok(entity).build();
 	}
 }
