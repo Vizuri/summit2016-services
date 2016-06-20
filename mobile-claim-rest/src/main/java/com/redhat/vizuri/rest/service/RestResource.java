@@ -87,6 +87,9 @@ public class RestResource {
 	private static final Logger LOG = LoggerFactory.getLogger(RestResource.class);
 	private static RuntimeManager manager;
 	private static final String PROCESS_VAR_CLAIM_COMMENTS = "claimComments";
+	private static final String PROCESS_VAR_NOTIFY_ADJUSTER = "notifyAdjuster";
+	private static final String PROCESS_VAR_NOTIFY_CUSTOMER = "notifyCustomer";
+	private static final String MESSAGE_VAR_SOURCE = "messageSource";
 	private static final String PROCESS_VAR_PHOTO = "photo";
 	private static final String PROCESS_VAR_PHOTO_COUNTER = "photoCounter";
 	private static final String UPLOAD_PHOTO_SIGNAL = "upload-photo";
@@ -146,15 +149,19 @@ public class RestResource {
 
 		claimComments.add(params.get(PROCESS_VAR_CLAIM_COMMENTS));
 		variables.put(PROCESS_VAR_CLAIM_COMMENTS, claimComments);
+		
+		variables.put(PROCESS_VAR_NOTIFY_ADJUSTER, !"adjuster".equalsIgnoreCase(String.valueOf(params.get(MESSAGE_VAR_SOURCE))));
+		variables.put(PROCESS_VAR_NOTIFY_CUSTOMER, !"customer".equalsIgnoreCase(String.valueOf(params.get(MESSAGE_VAR_SOURCE))));
 
 		setProcessCommand.setVariables(variables);
+		kieSession.execute(setProcessCommand);
 
 		SignalEventCommand signalEventCommand = new SignalEventCommand();
 		signalEventCommand.setProcessInstanceId(processInstanceId);
 		signalEventCommand.setEventType(ADD_COMMENTS_SIGNAL);
 
 		kieSession.execute(signalEventCommand);
-		kieSession.execute(setProcessCommand);
+		
 
 		Map<String, String> entity = new HashMap();
 		entity.put("status", "add-comment-success");
@@ -389,14 +396,19 @@ public class RestResource {
 		photo.setContent(content);
 		variables.put(photovarName, photo);
 		variables.put(PROCESS_VAR_PHOTO_COUNTER, photoCounter);
+		
+		variables.put(PROCESS_VAR_NOTIFY_ADJUSTER, !"adjuster".equalsIgnoreCase(String.valueOf(params.get(MESSAGE_VAR_SOURCE))));
+		variables.put(PROCESS_VAR_NOTIFY_CUSTOMER, !"customer".equalsIgnoreCase(String.valueOf(params.get(MESSAGE_VAR_SOURCE))));
+		
 		setProcessCommand.setVariables(variables);
 
 		SignalEventCommand signalEventCommand = new SignalEventCommand();
 		signalEventCommand.setProcessInstanceId(processInstanceId);
 		signalEventCommand.setEventType(UPLOAD_PHOTO_SIGNAL);
-
-		kieSession.execute(signalEventCommand);
 		kieSession.execute(setProcessCommand);
+		
+		kieSession.execute(signalEventCommand);
+		
 
 		StringBuffer url = request.getRequestURL();
 		String uri = request.getRequestURI();
