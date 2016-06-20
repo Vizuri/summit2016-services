@@ -5,9 +5,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Claim implements Serializable {
+
 	private static final long serialVersionUID = 8817532564043280353L;
-	
 	private String id;
+	private long processId;
 	private Incident incident;
 	private Customer customer;
 	private List<Questionnaire> questionnaires = new ArrayList<Questionnaire>();
@@ -16,7 +17,7 @@ public class Claim implements Serializable {
 	private Double statedValue = 0d;
 	private Double adjustedValue = 0d;
 	private List<Comment> comments = new ArrayList<Comment>();
-	
+
 	public Claim() {
 		super();
 	}
@@ -52,7 +53,7 @@ public class Claim implements Serializable {
 	public void setQuestionnaires(List<Questionnaire> questionnaires) {
 		this.questionnaires = questionnaires;
 	}
-	
+
 	public void addQuestionnaire(Questionnaire q) {
 		this.questionnaires.add(q);
 	}
@@ -64,7 +65,7 @@ public class Claim implements Serializable {
 	public void setPhotos(List<Photo> photos) {
 		this.photos = photos;
 	}
-	
+
 	public void addPhoto(Photo photo) {
 		this.photos.add(photo);
 	}
@@ -100,16 +101,14 @@ public class Claim implements Serializable {
 	public void setComments(List<Comment> comments) {
 		this.comments = comments;
 	}
-	
+
 	public void addComment(Comment comment) {
 		this.comments.add(comment);
 	}
 
 	@Override
 	public String toString() {
-		return "Claim [id=" + id + ", incident=" + incident + ", questionnaires=" + questionnaires + ", photos="
-				+ photos + ", approved=" + approved + ", statedValue=" + statedValue + ", adjustedValue="
-				+ adjustedValue + ", messages=" + comments + "]";
+		return "Claim [id=" + id + ", incident=" + incident + ", questionnaires=" + questionnaires + ", photos=" + photos + ", approved=" + approved + ", statedValue=" + statedValue + ", adjustedValue=" + adjustedValue + ", messages=" + comments + "]";
 	}
 
 	@Override
@@ -137,5 +136,12 @@ public class Claim implements Serializable {
 		return true;
 	}
 
-	
+	public long getProcessId() {
+		return processId;
+	}
+
+	public void setProcessId(long processId) {
+		this.processId = processId;
+	}
+
 }
