@@ -15,3 +15,4 @@ dist
 *.sql
 /build/
 .docs
+mobile-claim-rest/src/main/webapp/node_modules
