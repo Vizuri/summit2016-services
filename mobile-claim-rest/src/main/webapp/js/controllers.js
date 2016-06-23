@@ -13,8 +13,13 @@
 		vm.comments = [];
 		vm.photos = [];
 
-		vm.loadComments = loadComments;
-		vm.loadImage = loadImage;
+		vm.load = load;
+
+		function load() {
+			loadImage();
+			loadComments();
+			loadVars();
+		}
 
 		function loadVars() {
 			$http({
@@ -66,9 +71,7 @@
 			});
 		}
 
-		loadImage();
-		loadComments();
-		loadVars();
+		load();
 
 	}
 
