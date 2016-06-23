@@ -11,19 +11,15 @@
 			<div class="row">
 				<form class="form-inline">
 					<div class="form-group">
-						<label for="pId">Process Id</label> <input type="text" class="form-control" id="pId" placeholder="1">
+						<label for="pId">Process Id</label> <input type="text" class="form-control" id="pId" placeholder="1" ng-model="vm.processId">
 					</div>
-					<button class="btn btn-default">Update</button>
+					<button class="btn btn-default" ng-click="loadImage()">Update</button>
 				</form>
 			</div>
 			<div class="row">
-				<div class="col-md-8">
-					<img>IMG PLACEHOLDER
-				</div>
-				<div class="col-md-4">
-					<div>Comments</div>
-				</div>
+				<div id="image"></div>
 			</div>
+			<div class="row">Comments</div>
 			<div class="row">Photos</div>
 		</div>
 	</div>
