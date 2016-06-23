@@ -1,10 +1,5 @@
 package com.redhat.vizuri.rest.service;
 
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiResponse;
-import io.swagger.annotations.ApiResponses;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -54,6 +49,7 @@ import org.jbpm.document.Document;
 import org.jbpm.document.marshalling.DocumentMarshallingStrategy;
 import org.jbpm.document.service.impl.DocumentStorageServiceImpl;
 import org.jbpm.process.instance.impl.demo.SystemOutWorkItemHandler;
+import org.jbpm.process.workitem.rest.RESTWorkItemHandler;
 import org.jbpm.runtime.manager.impl.DefaultRegisterableItemsFactory;
 import org.jbpm.services.task.identity.JBossUserGroupCallbackImpl;
 import org.kie.api.KieServices;
@@ -75,6 +71,11 @@ import org.slf4j.LoggerFactory;
 import com.redhat.vizuri.brms.service.RuleProcessor;
 import com.redhat.vizuri.insurance.Incident;
 import com.redhat.vizuri.insurance.Questionnaire;
+
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
 
 @Path("/vizuri/summit")
 @Api("/vizuri/summit")
@@ -105,7 +106,8 @@ public class RestResource {
 		DefaultRegisterableItemsFactory df = new DefaultRegisterableItemsFactory();
 		df.addWorkItemHandler("Receive Task", ReceiveTaskHandler.class);
 		df.addWorkItemHandler("Manual Task", SystemOutWorkItemHandler.class);
-
+		//df.addWorkItemHandler("Rest", RESTWorkItemHandler.class);
+		
 		KieServices kieServices = KieServices.Factory.get();
 		KieContainer kieContainer = kieServices.getKieClasspathContainer();
 		LOG.info("logger : {}", kieContainer);
@@ -134,6 +136,7 @@ public class RestResource {
 		LOG.info("addComments >> processInstanceId->{},parmas->{}", processInstanceId, params);
 		RuntimeEngine engine = manager.getRuntimeEngine(ProcessInstanceIdContext.get(processInstanceId));
 		KieSession kieSession = engine.getKieSession();
+		kieSession.getWorkItemManager().registerWorkItemHandler("Rest", new RESTWorkItemHandler("", ""));
 		ProcessInstance processInstance = kieSession.getProcessInstance(processInstanceId);
 
 		WorkflowProcessInstance workflowProcessInstance = (WorkflowProcessInstance) processInstance;
@@ -180,6 +183,7 @@ public class RestResource {
 		LOG.info("inside doAdjuster : taskContent >> {}, processInstanceId >> {}", taskContent, processInstanceId);
 		RuntimeEngine engine = manager.getRuntimeEngine(ProcessInstanceIdContext.get(processInstanceId));
 		KieSession kieSession = engine.getKieSession();
+		kieSession.getWorkItemManager().registerWorkItemHandler("Rest", new RESTWorkItemHandler("", ""));
 		SignalEventCommand command = new SignalEventCommand();
 		command.setProcessInstanceId(processInstanceId);
 		Map<String, Object> params = new HashMap<String, Object>();
@@ -296,6 +300,7 @@ public class RestResource {
 	public Long startProcess() {
 		RuntimeEngine engine = manager.getRuntimeEngine(ProcessInstanceIdContext.get());
 		KieSession kieSession = engine.getKieSession();
+		kieSession.getWorkItemManager().registerWorkItemHandler("Rest", new RESTWorkItemHandler("", ""));
 		Map<String, Object> params = new HashMap<String, Object>();
 		params.put(PROCESS_VAR_PHOTO_COUNTER, -1);
 		ProcessInstance instance = kieSession.startProcess("mobile-claims-bpm.mobile-claim-process", params);
@@ -335,6 +340,7 @@ public class RestResource {
 		LOG.info("inside uploadPhoto >> processInstanceId :{}, fileName :{}, jsonMap : {}", processInstanceId, fileName);
 		RuntimeEngine engine = manager.getRuntimeEngine(ProcessInstanceIdContext.get(processInstanceId));
 		KieSession kieSession = engine.getKieSession();
+		kieSession.getWorkItemManager().registerWorkItemHandler("Rest", new RESTWorkItemHandler("", ""));
 		ProcessInstance processInstance = kieSession.getProcessInstance(processInstanceId);
 
 		WorkflowProcessInstance workflowProcessInstance = (WorkflowProcessInstance) processInstance;
