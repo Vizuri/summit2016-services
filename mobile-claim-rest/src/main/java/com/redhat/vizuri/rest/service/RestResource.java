@@ -291,20 +291,31 @@ public class RestResource {
 	/**
 	 * When a process is started, photoCounterByProcess will get a initial set of 0 counter
 	 */
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@POST
 	@Path("/startprocess")
 	@Produces(MediaType.TEXT_PLAIN)
-	@Consumes(MediaType.APPLICATION_JSON)
+	@Consumes({MediaType.APPLICATION_JSON})
 	@TransactionAttribute(TransactionAttributeType.REQUIRED)
 	@ApiOperation(value = "Starts a new claim process", notes = "Returns a process Id from the claim", response = Long.class)
 	@ApiResponses(value = { @ApiResponse(code = 500, message = "Invalid if there was run time error") })
-	public Long startProcess(@SuppressWarnings("rawtypes") Map params) {
+	
+	public Long startProcess( Map params) {
+		LOG.info("inside start process > params >> {}",params);
 		RuntimeEngine engine = manager.getRuntimeEngine(ProcessInstanceIdContext.get());
 		KieSession kieSession = engine.getKieSession();
 		kieSession.getWorkItemManager().registerWorkItemHandler("Rest", new RESTWorkItemHandler("", ""));
 		//Map<String, Object> params = new HashMap<String, Object>();
-		Object claimedAmount = params.get(PROCESS_VAR_CLAIMED_AMOUNT);
-		params.put(PROCESS_VAR_CLAIMED_AMOUNT, Float.valueOf(claimedAmount.toString()));
+		Object claimedAmountVar = params.get(PROCESS_VAR_CLAIMED_AMOUNT);
+		
+		if(claimedAmountVar != null){
+			try {
+				params.put(PROCESS_VAR_CLAIMED_AMOUNT, Float.valueOf(claimedAmountVar.toString()));
+			} catch (Exception e) {
+				params.remove(PROCESS_VAR_CLAIMED_AMOUNT);
+			}
+		}
+		
 		params.put(PROCESS_VAR_PHOTO_COUNTER, -1);
 		//map.put
 		ProcessInstance instance = kieSession.startProcess("mobile-claims-bpm.mobile-claim-process", params);
