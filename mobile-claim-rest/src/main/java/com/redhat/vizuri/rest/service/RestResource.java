@@ -94,6 +94,7 @@ public class RestResource {
 	private static final String PROCESS_VAR_PHOTO = "photo";
 	private static final String PROCESS_VAR_PHOTO_COUNTER = "photoCounter";
 	private static final String UPLOAD_PHOTO_SIGNAL = "upload-photo";
+	private static final Object PROCESS_VAR_CLAIMED_AMOUNT = "claimedAmount";
 	@PersistenceUnit(unitName = "com.redhat.vizuri.jbpm.domain")
 	private EntityManagerFactory emf;
 	private RuleProcessor ruleProcessor = null;
@@ -297,12 +298,15 @@ public class RestResource {
 	@TransactionAttribute(TransactionAttributeType.REQUIRED)
 	@ApiOperation(value = "Starts a new claim process", notes = "Returns a process Id from the claim", response = Long.class)
 	@ApiResponses(value = { @ApiResponse(code = 500, message = "Invalid if there was run time error") })
-	public Long startProcess() {
+	public Long startProcess(@SuppressWarnings("rawtypes") Map params) {
 		RuntimeEngine engine = manager.getRuntimeEngine(ProcessInstanceIdContext.get());
 		KieSession kieSession = engine.getKieSession();
 		kieSession.getWorkItemManager().registerWorkItemHandler("Rest", new RESTWorkItemHandler("", ""));
-		Map<String, Object> params = new HashMap<String, Object>();
+		//Map<String, Object> params = new HashMap<String, Object>();
+		Object claimedAmount = params.get(PROCESS_VAR_CLAIMED_AMOUNT);
+		params.put(PROCESS_VAR_CLAIMED_AMOUNT, Float.valueOf(claimedAmount.toString()));
 		params.put(PROCESS_VAR_PHOTO_COUNTER, -1);
+		//map.put
 		ProcessInstance instance = kieSession.startProcess("mobile-claims-bpm.mobile-claim-process", params);
 		LOG.info("instance id : " + instance.getId());
 		return instance.getId();
