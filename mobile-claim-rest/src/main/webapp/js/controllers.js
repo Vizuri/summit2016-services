@@ -71,6 +71,8 @@
 			});
 		}
 
+		load();
+
 		$interval(function() {
 			$log.info('Updating...');
 			load();
