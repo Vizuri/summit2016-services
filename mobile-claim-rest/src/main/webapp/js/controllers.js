@@ -5,7 +5,7 @@
 
 	angular.module('bpmsFlowApp.controllers').controller('MainController', mainController);
 
-	function mainController($log, $http) {
+	function mainController($log, $http, $interval) {
 		$log.info('Inside MainController');
 		var vm = this;
 
@@ -71,7 +71,10 @@
 			});
 		}
 
-		load();
+		$interval(function() {
+			$log.info('Updating...');
+			load();
+		}, 10000);
 
 	}
 
