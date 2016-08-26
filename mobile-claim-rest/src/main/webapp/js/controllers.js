@@ -91,7 +91,7 @@
 				$log.info('Updating...');
 				load();
 				vm.updateCount++;
-				if (vm.updateCount > 9) {
+				if (vm.updateCount > 20) {
 					vm.updateCount = 0;
 					vm.autoUpdate = false;
 				}
